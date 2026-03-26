@@ -2,7 +2,7 @@
 replicaCount: 1
 
 image:
-  repository: docker.io/xbrekz1/rbac-manager
+  repository: ghcr.io/xbrekz1/rbac-manager
   pullPolicy: IfNotPresent
   tag: "v1.0.0"
 
