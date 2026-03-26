@@ -4,7 +4,7 @@ replicaCount: 1
 image:
   repository: docker.io/xbrekz1/rbac-manager
   pullPolicy: IfNotPresent
-  tag: "v2.0.0"
+  tag: "v1.0.0"
 
 imagePullSecrets: []
 nameOverride: ""
