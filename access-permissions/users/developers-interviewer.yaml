@@ -1,0 +1,27 @@
+# AccessGrant for developers-interviewer - Developer Role
+apiVersion: rbacmanager.io/v1alpha1
+kind: AccessGrant
+metadata:
+  name: developers-interviewer
+  namespace: rbac-manager
+spec:
+  namespaces:
+    - interviewer
+    - interviewer-test
+    - interviewer-dev
+    - interviewer-admin
+    - interviewer-admin-test
+    - interviewer-admin-dev
+    - labeler-dev
+    - labeler-test
+    - labeler-prod
+    - hermesapi-prod
+    - hermesapi-test
+    - hermesapi-dev
+    - hermesapi-interviewer
+    - hermesapi-interviewer-test
+    - hermesapi-interviewer-dev
+  role: developer-extended
+  serviceAccountName: developers-interviewer-sa
+  labels:
+    user: developers-interviewer

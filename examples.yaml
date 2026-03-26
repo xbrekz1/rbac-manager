@@ -1,0 +1,283 @@
+# Примеры AccessGrant для RBAC Manager
+#
+# Этот файл содержит различные примеры использования AccessGrant CRD
+# для управления RBAC в Kubernetes кластере
+
+---
+# Пример 1: Viewer доступ для команды мониторинга
+# Может просматривать поды и логи в namespace'ах мониторинга
+apiVersion: rbacmanager.io/v1alpha1
+kind: AccessGrant
+metadata:
+  name: monitoring-viewer
+  namespace: rbac-manager
+  annotations:
+    description: "Доступ на чтение для команды мониторинга"
+    team: "monitoring"
+spec:
+  namespaces:
+    - monitoring
+    - logging
+    - observability
+  role: viewer
+  serviceAccountName: monitoring-viewer-sa
+  labels:
+    team: monitoring
+    access-level: read-only
+
+---
+# Пример 2: Developer доступ для команды разработки
+# Может просматривать поды, логи и выполнять команды для отладки
+apiVersion: rbacmanager.io/v1alpha1
+kind: AccessGrant
+metadata:
+  name: backend-developer
+  namespace: rbac-manager
+  annotations:
+    description: "Доступ разработчика для отладки backend приложений"
+    team: "backend"
+spec:
+  namespaces:
+    - backend-dev
+    - backend-staging
+  role: developer
+  serviceAccountName: backend-dev-sa
+  labels:
+    team: backend
+    environment: non-production
+    access-level: debug
+
+---
+# Пример 3: Maintainer доступ для DevOps команды
+# Полные права для управления production namespace
+apiVersion: rbacmanager.io/v1alpha1
+kind: AccessGrant
+metadata:
+  name: platform-maintainer
+  namespace: rbac-manager
+  annotations:
+    description: "Полные права для платформенной команды"
+    team: "platform"
+    approval-ticket: "DEVOPS-123"
+spec:
+  namespaces:
+    - production
+    - infrastructure
+  role: maintainer
+  serviceAccountName: platform-admin-sa
+  labels:
+    team: platform
+    environment: production
+    access-level: full
+
+---
+# Пример 4: Кластерный аудиторский доступ
+# auditor — видит всё включая secrets, RBAC, network policies. Только чтение.
+# clusterWide: true — доступ ко всем namespace без перечисления.
+# Рекомендуется выдавать временно (добавить аннотацию expires-at).
+apiVersion: rbacmanager.io/v1alpha1
+kind: AccessGrant
+metadata:
+  name: security-auditor
+  namespace: rbac-manager
+  annotations:
+    description: "Кластерный доступ для security audit"
+    team: "security"
+    compliance: "SOC2"
+    expires-at: "2026-04-30"
+spec:
+  clusterWide: true
+  role: auditor
+  serviceAccountName: security-auditor-sa
+  labels:
+    team: security
+    access-level: audit
+    compliance: soc2
+
+---
+# Пример 5: CI/CD доступ для GitLab Runner
+# deployer — может обновлять deployments/services/jobs, но не может exec и не читает secrets.
+# Использование maintainer для CI/CD — антипаттерн: компрометация runner даёт полный доступ к кластеру.
+apiVersion: rbacmanager.io/v1alpha1
+kind: AccessGrant
+metadata:
+  name: gitlab-ci-deployer
+  namespace: rbac-manager
+  annotations:
+    description: "CI/CD доступ для автоматического деплоя"
+    ci-system: "gitlab"
+    project-id: "main-application"
+spec:
+  namespaces:
+    - production
+    - staging
+    - review-apps
+  role: deployer
+  serviceAccountName: gitlab-runner-sa
+  labels:
+    ci-cd: gitlab
+    automation: deployment
+    access-level: deploy
+
+---
+# Пример 6: Доступ для мультитенантности
+# Developer доступ для клиентских namespace'ов
+apiVersion: rbacmanager.io/v1alpha1
+kind: AccessGrant
+metadata:
+  name: client-app-developer
+  namespace: rbac-manager
+  annotations:
+    description: "Доступ разработчика для клиентских приложений"
+    client: "client-alpha"
+spec:
+  namespaces:
+    - client-alpha-dev
+    - client-alpha-test
+  role: developer
+  serviceAccountName: client-alpha-dev-sa
+  labels:
+    client: client-alpha
+    environment: development
+    team: client-solutions
+
+---
+# Пример 7: Временный доступ для поддержки
+# Viewer доступ с метками для отслеживания
+apiVersion: rbacmanager.io/v1alpha1
+kind: AccessGrant
+metadata:
+  name: support-temp-access
+  namespace: rbac-manager
+  annotations:
+    description: "Временный доступ для службы поддержки"
+    ticket: "SUP-456"
+    expires: "2025-09-01"
+    requestor: "john.doe@company.com"
+spec:
+  namespaces:
+    - customer-service
+    - notifications
+  role: viewer
+  serviceAccountName: support-temp-sa
+  labels:
+    team: support
+    access-type: temporary
+    ticket-id: SUP-456
+
+---
+# Пример 8: Доступ для внешнего подрядчика
+# Ограниченный developer доступ
+apiVersion: rbacmanager.io/v1alpha1
+kind: AccessGrant
+metadata:
+  name: contractor-limited
+  namespace: rbac-manager
+  annotations:
+    description: "Ограниченный доступ для внешнего подрядчика"
+    contractor: "External Dev Inc"
+    contract-end: "2025-12-31"
+spec:
+  namespaces:
+    - contractor-workspace
+  role: developer
+  serviceAccountName: contractor-sa
+  labels:
+    access-type: contractor
+    team: external
+    limited: "true"
+
+---
+# Пример 9: Доступ для QA команды
+# Developer доступ для тестирования
+apiVersion: rbacmanager.io/v1alpha1
+kind: AccessGrant
+metadata:
+  name: qa-testing
+  namespace: rbac-manager
+  annotations:
+    description: "Доступ для QA команды на тестовые среды"
+    team: "quality-assurance"
+spec:
+  namespaces:
+    - qa-testing
+    - integration-tests
+    - performance-tests
+  role: developer
+  serviceAccountName: qa-team-sa
+  labels:
+    team: qa
+    environment: testing
+    access-level: debug
+
+---
+# Пример 10: Доступ для database администратора
+# Maintainer доступ только к database namespace'ам
+apiVersion: rbacmanager.io/v1alpha1
+kind: AccessGrant
+metadata:
+  name: dba-access
+  namespace: rbac-manager
+  annotations:
+    description: "DBA доступ для управления базами данных"
+    team: "database"
+    on-call: "true"
+spec:
+  namespaces:
+    - databases
+    - database-backups
+    - database-monitoring
+  role: maintainer
+  serviceAccountName: dba-sa
+  labels:
+    team: database
+    specialty: dba
+    on-call: "true"
+
+---
+# Пример 11: Тестирование прав на просмотр namespaces
+# Viewer доступ с правами на просмотр namespaces
+apiVersion: rbacmanager.io/v1alpha1
+kind: AccessGrant
+metadata:
+  name: namespace-viewer-test
+  namespace: rbac-manager
+  annotations:
+    description: "Тест прав на просмотр namespaces для роли viewer"
+    team: "platform"
+    purpose: "namespace-visibility-test"
+spec:
+  namespaces:
+    - default
+    - kube-system
+    - monitoring
+  role: viewer
+  serviceAccountName: namespace-viewer-sa
+  labels:
+    test: namespace-visibility
+    access-level: read-only
+    team: platform
+
+---
+# Пример 12: Developer с правами на namespaces
+# Developer доступ включая просмотр namespaces для отладки
+apiVersion: rbacmanager.io/v1alpha1
+kind: AccessGrant
+metadata:
+  name: namespace-developer-test
+  namespace: rbac-manager
+  annotations:
+    description: "Developer роль с правами на просмотр namespaces"
+    team: "development"
+    use-case: "cross-namespace-debugging"
+spec:
+  namespaces:
+    - backend-dev
+    - frontend-dev
+    - shared-services
+  role: developer
+  serviceAccountName: namespace-dev-sa
+  labels:
+    test: namespace-developer
+    access-level: debug
+    team: development

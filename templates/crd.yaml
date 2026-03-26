@@ -1,0 +1,146 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: accessgrants.rbacmanager.io
+  labels:
+    app.kubernetes.io/name: rbac-manager
+    app.kubernetes.io/part-of: rbac-manager
+spec:
+  group: rbacmanager.io
+  names:
+    kind: AccessGrant
+    listKind: AccessGrantList
+    plural: accessgrants
+    singular: accessgrant
+    shortNames:
+      - ag
+  scope: Namespaced
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          required:
+            - spec
+          properties:
+            apiVersion:
+              type: string
+            kind:
+              type: string
+            metadata:
+              type: object
+            spec:
+              type: object
+              properties:
+                namespaces:
+                  type: array
+                  description: Target namespaces for the access grant
+                  items:
+                    type: string
+                role:
+                  type: string
+                  description: |
+                    Predefined role name. Hierarchy (least → most privileged):
+                    reader → viewer → developer → developer-extended → operator → maintainer
+                    deployer and debugger are orthogonal (CI/CD and runtime debugging).
+                    auditor provides broad read-only access for security reviews.
+                    developer-extended is identical to developer but also receives a ClusterRole
+                    granting namespace list/get/watch, required for OpenLens sidebar navigation.
+                  enum:
+                    - reader
+                    - viewer
+                    - developer
+                    - developer-extended
+                    - deployer
+                    - debugger
+                    - operator
+                    - auditor
+                    - maintainer
+                customRules:
+                  type: array
+                  description: Custom RBAC rules (used when role is not specified)
+                  items:
+                    type: object
+                    properties:
+                      apiGroups:
+                        type: array
+                        items:
+                          type: string
+                      resources:
+                        type: array
+                        items:
+                          type: string
+                      verbs:
+                        type: array
+                        items:
+                          type: string
+                clusterWide:
+                  type: boolean
+                  default: false
+                  description: Whether to create ClusterRole instead of Role
+                serviceAccountName:
+                  type: string
+                  description: Service account name (optional, will be auto-generated if not specified)
+                labels:
+                  type: object
+                  description: Additional labels to add to created resources
+                  additionalProperties:
+                    type: string
+                annotations:
+                  type: object
+                  description: Additional annotations to add to created resources
+                  additionalProperties:
+                    type: string
+            status:
+              type: object
+              properties:
+                phase:
+                  type: string
+                  description: Current state of the AccessGrant
+                  enum:
+                    - Pending
+                    - Active
+                    - Failed
+                serviceAccount:
+                  type: string
+                  description: Name of the created ServiceAccount
+                namespaces:
+                  type: array
+                  description: List of namespaces where resources were created
+                  items:
+                    type: string
+                clusterRole:
+                  type: string
+                  description: Name of the created ClusterRole (if clusterWide is true)
+                message:
+                  type: string
+                  description: Human-readable message with details about current state
+      additionalPrinterColumns:
+        - name: Role
+          type: string
+          jsonPath: .spec.role
+          priority: 0
+        - name: ServiceAccount
+          type: string
+          jsonPath: .status.serviceAccount
+          priority: 0
+        - name: Namespaces
+          type: string
+          jsonPath: .spec.namespaces[*]
+          priority: 0
+        - name: ClusterWide
+          type: boolean
+          jsonPath: .spec.clusterWide
+          priority: 1
+        - name: Phase
+          type: string
+          jsonPath: .status.phase
+          priority: 0
+        - name: Age
+          type: date
+          jsonPath: .metadata.creationTimestamp
+          priority: 0
+      subresources:
+        status: {}

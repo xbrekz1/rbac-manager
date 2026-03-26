@@ -1,0 +1,21 @@
+# Binaries
+manager
+*.exe
+
+# Go
+*.test
+*.out
+/vendor/
+
+# Helm
+*.tgz
+charts/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp

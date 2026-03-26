@@ -1,0 +1,39 @@
+version: "3"
+
+vars:
+  RBAC_NAMESPACE: rbac-manager
+  DOWNLOADS_DIR: "{{.HOME}}/Downloads"
+  SCRIPTS_DIR: "{{.TASKFILE_DIR}}/scripts"
+
+tasks:
+  default:
+    desc: "Показать доступные команды"
+    cmds:
+      - task --list
+
+  generate-kubeconfig:
+    desc: "Сгенерировать KUBECONFIG для AccessGrant"
+    cmds:
+      - echo "👤 Обработка AccessGrant {{.ACCESSGRANT}}"
+      - kubectl get accessgrant {{.ACCESSGRANT}} -n {{.RBAC_NAMESPACE}}
+      - echo "🔑 Генерация KUBECONFIG..."
+      - |
+        SA_NAME=$(kubectl get accessgrant {{.ACCESSGRANT}} -n {{.RBAC_NAMESPACE}} -o jsonpath="{.spec.serviceAccountName}")
+        echo "ServiceAccount: $SA_NAME"
+        {{.SCRIPTS_DIR}}/generate-kubeconfig.sh -o {{.DOWNLOADS_DIR}} $SA_NAME
+        echo "🎉 Готово! Проверьте {{.DOWNLOADS_DIR}}"
+
+  test-access-grant:
+    desc: "Протестировать доступ для AccessGrant"
+    cmds:
+      - echo "🧪 Тестирование AccessGrant {{.ACCESSGRANT}}"
+      - |
+        SA_NAME=$(kubectl get accessgrant {{.ACCESSGRANT}} -n {{.RBAC_NAMESPACE}} -o jsonpath="{.spec.serviceAccountName}")
+        echo "Проверка аутентификации:"
+        kubectl --kubeconfig={{.DOWNLOADS_DIR}}/kubeconfig-$SA_NAME.yaml auth whoami
+        echo ""
+        echo "Проверка доступа к namespaces:"
+        kubectl --kubeconfig={{.DOWNLOADS_DIR}}/kubeconfig-$SA_NAME.yaml get namespaces
+        echo ""
+        echo "Проверка доступа к подам в default:"
+        kubectl --kubeconfig={{.DOWNLOADS_DIR}}/kubeconfig-$SA_NAME.yaml get pods -n default
