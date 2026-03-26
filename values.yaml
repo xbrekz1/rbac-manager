@@ -4,7 +4,7 @@ replicaCount: 1
 image:
   repository: ghcr.io/xbrekz1/rbac-manager
   pullPolicy: IfNotPresent
-  tag: "1.0.0"
+  tag: "1.0.1"
 
 imagePullSecrets: []
 nameOverride: ""
