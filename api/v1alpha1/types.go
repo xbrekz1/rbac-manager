@@ -18,6 +18,7 @@ const (
 	RoleOperator          PredefinedRole = "operator"
 	RoleAuditor           PredefinedRole = "auditor"
 	RoleMaintainer        PredefinedRole = "maintainer"
+	RoleClusterAdmin      PredefinedRole = "cluster-admin"
 )
 
 // Phase represents the current lifecycle phase of an AccessGrant.
@@ -36,7 +37,7 @@ type AccessGrantSpec struct {
 	Namespaces []string `json:"namespaces,omitempty"`
 
 	// Role is the name of a predefined role.
-	// +kubebuilder:validation:Enum=reader;viewer;developer;developer-extended;deployer;debugger;operator;auditor;maintainer
+	// +kubebuilder:validation:Enum=reader;viewer;developer;developer-extended;deployer;debugger;operator;auditor;maintainer;cluster-admin
 	// +optional
 	Role PredefinedRole `json:"role,omitempty"`
 

@@ -378,6 +378,22 @@ var predefinedRoles = map[string][]rbacv1.PolicyRule{
 			Verbs:     []string{"*"},
 		},
 	},
+
+	// cluster-admin — полный доступ ко всему кластеру.
+	// Эквивалент встроенной роли cluster-admin в Kubernetes.
+	// ВАЖНО: всегда использовать с clusterWide: true, иначе права будут только в одном namespace.
+	// Подходит для: платформенные инженеры, emergency доступ, деплой сложных helm-чартов.
+	"cluster-admin": {
+		{
+			APIGroups: []string{"*"},
+			Resources: []string{"*"},
+			Verbs:     []string{"*"},
+		},
+		{
+			NonResourceURLs: []string{"*"},
+			Verbs:           []string{"*"},
+		},
+	},
 }
 
 // rolesNeedingNamespaceViewer lists roles that require an additional ClusterRole

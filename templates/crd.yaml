@@ -58,6 +58,7 @@ spec:
                     - operator
                     - auditor
                     - maintainer
+                    - cluster-admin
                 customRules:
                   type: array
                   description: Custom RBAC rules (used when role is not specified)
