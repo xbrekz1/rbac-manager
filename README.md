@@ -1,12 +1,19 @@
-# rbac-manager
+<div align="center">
 
-A Kubernetes operator for declarative RBAC management via a single custom resource.
+<img src="docs/logo.svg" alt="rbac-manager" width="500"/>
+
+<br/>
 
 [![CI](https://github.com/xbrekz1/rbac-manager/actions/workflows/ci.yml/badge.svg)](https://github.com/xbrekz1/rbac-manager/actions/workflows/ci.yml)
 [![Release](https://github.com/xbrekz1/rbac-manager/actions/workflows/release.yml/badge.svg)](https://github.com/xbrekz1/rbac-manager/actions/workflows/release.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/xbrekz1/rbac-manager)](https://goreportcard.com/report/github.com/xbrekz1/rbac-manager)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-Instead of manually creating ServiceAccounts, Roles, and RoleBindings across namespaces — you declare an `AccessGrant`. The operator handles the rest, including guaranteed cleanup on deletion via Kubernetes finalizers.
+</div>
+
+---
+
+Instead of manually creating ServiceAccounts, Roles, and RoleBindings across namespaces — you declare one `AccessGrant`. The operator handles the rest.
 
 ```yaml
 apiVersion: rbacmanager.io/v1alpha1
@@ -20,34 +27,81 @@ spec:
   serviceAccountName: john-dev-sa
 ```
 
+```
+$ kubectl get accessgrants -n rbac-manager
+NAME             ROLE        SERVICEACCOUNT   NAMESPACES                        PHASE    AGE
+john-developer   developer   john-dev-sa      [backend-dev backend-staging]     Active   5s
+```
+
+---
+
+## How it works
+
+```mermaid
+flowchart LR
+    U(["👤 User / CI"])
+    AG["AccessGrant\n─────────────\nrole: developer\nnamespaces:\n  - backend-dev\n  - backend-staging"]
+    OP[["⚙️ rbac-manager\noperator"]]
+
+    SA["ServiceAccount\njohn-dev-sa"]
+    NS1["backend-dev\n─────────────\nRole\nRoleBinding"]
+    NS2["backend-staging\n─────────────\nRole\nRoleBinding"]
+
+    U -->|kubectl apply| AG
+    AG -->|watch| OP
+    OP --> SA
+    OP --> NS1
+    OP --> NS2
+```
+
+When the `AccessGrant` is deleted, the operator removes **all** created resources via Kubernetes finalizers — even if it was temporarily down during deletion.
+
+---
+
+## Role hierarchy
+
+```mermaid
+graph LR
+    reader --> viewer --> developer --> operator --> maintainer
+
+    developer --> developer-extended
+
+    deployer("deployer\nCI/CD")
+    debugger("debugger\nIncident response")
+    auditor("auditor\nSecurity review")
+    ca("cluster-admin\nFull cluster access")
+
+    style deployer  fill:#f0f4ff,stroke:#6c8ebf
+    style debugger  fill:#f0f4ff,stroke:#6c8ebf
+    style auditor   fill:#f0f4ff,stroke:#6c8ebf
+    style ca        fill:#fff0f0,stroke:#d9534f
+```
+
+| Role | Logs | Exec | Secrets | Write | Use case |
+|------|:----:|:----:|:-------:|:-----:|----------|
+| `reader` | — | — | — | — | Stakeholders, dashboards |
+| `viewer` | ✓ | — | — | — | Monitoring, on-call |
+| `developer` | ✓ | ✓ | read | — | Developers, QA |
+| `developer-extended` | ✓ | ✓ | read | — | Same + namespace listing for [OpenLens](https://github.com/MuhammedKalkan/OpenLens) |
+| `deployer` | ✓ | — | — | ✓ | CI/CD pipelines |
+| `debugger` | ✓ | ✓ | — | — | Incident response, port-forward |
+| `operator` | ✓ | ✓ | read | ✓ | SRE teams |
+| `auditor` | ✓ | — | read | — | Security reviews |
+| `maintainer` | ✓ | ✓ | ✓ | ✓ | Tech leads, service owners |
+| `cluster-admin` | ✓ | ✓ | ✓ | ✓ | Full cluster access — use with `clusterWide: true` |
+
 ---
 
 ## Features
 
 - **Event-driven** — reacts to changes instantly via Kubernetes watch, no polling
-- **Finalizer-based cleanup** — all RBAC resources are deleted when AccessGrant is removed, even if the operator was temporarily down
+- **Finalizer-based cleanup** — all RBAC resources are deleted when AccessGrant is removed
 - **Self-healing** — periodically reconciles to restore resources deleted externally
-- **9 predefined roles** — covering common access patterns out of the box
+- **10 predefined roles** — covering common access patterns out of the box
 - **Custom rules** — full `PolicyRule` support when predefined roles aren't enough
 - **ClusterWide mode** — one flag to switch from namespace-scoped to cluster-scoped
 - **HA ready** — leader election for multi-replica deployments
-- **Minimal image** — distroless base, non-root, read-only filesystem
-
----
-
-## Predefined roles
-
-| Role | Exec | Secrets | Deploy | Use case |
-|------|:----:|:-------:|:------:|----------|
-| `reader` | — | — | — | Stakeholders, dashboards — workloads visible, no logs or secrets |
-| `viewer` | — | — | — | Monitoring teams, on-call — pods and logs |
-| `developer` | ✓ | read | — | Developers — exec into pods, read configmaps and secrets |
-| `developer-extended` | ✓ | read | — | Same as `developer` + namespace listing for [OpenLens](https://github.com/MuhammedKalkan/OpenLens) |
-| `deployer` | — | — | ✓ | CI/CD pipelines — update deployments, services, jobs; no exec, no secrets |
-| `debugger` | ✓ | — | — | Incident response — exec, logs, port-forward; read-only otherwise |
-| `operator` | ✓ | read | ✓ | SRE teams — full workload management, ingresses, HPAs |
-| `auditor` | — | read | — | Security reviews — read everything including secrets and RBAC rules |
-| `maintainer` | ✓ | ✓ | ✓ | Tech leads — full access within the namespace |
+- **Minimal image** — distroless base, non-root, read-only filesystem, multi-arch (`amd64` + `arm64`)
 
 ---
 
@@ -62,12 +116,15 @@ helm install rbac-manager oci://ghcr.io/xbrekz1/charts/rbac-manager \
   --wait
 ```
 
-From source:
+<details>
+<summary>Install from source</summary>
 
 ```bash
 git clone https://github.com/xbrekz1/rbac-manager && cd rbac-manager
 helm install rbac-manager . --namespace rbac-manager --create-namespace --wait
 ```
+
+</details>
 
 ---
 
@@ -89,10 +146,20 @@ spec:
 EOF
 ```
 
+### Grant cluster-wide access
+
 ```bash
-kubectl get accessgrants -n rbac-manager
-# NAME    ROLE        SERVICEACCOUNT   NAMESPACES                      PHASE    AGE
-# alice   developer   alice-sa         [backend-dev backend-staging]   Active   3s
+kubectl apply -f - <<EOF
+apiVersion: rbacmanager.io/v1alpha1
+kind: AccessGrant
+metadata:
+  name: platform-bot
+  namespace: rbac-manager
+spec:
+  role: cluster-admin
+  clusterWide: true
+  serviceAccountName: platform-bot-sa
+EOF
 ```
 
 ### Generate kubeconfig

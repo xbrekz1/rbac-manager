@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 140" width="560" height="140">
+  <!-- Background -->
+  <rect width="560" height="140" rx="14" fill="#0d1117"/>
+
+  <!-- Subtle grid lines -->
+  <line x1="0" y1="46" x2="560" y2="46" stroke="#161b22" stroke-width="1"/>
+  <line x1="0" y1="93" x2="560" y2="93" stroke="#161b22" stroke-width="1"/>
+  <line x1="112" y1="0" x2="112" y2="140" stroke="#161b22" stroke-width="1"/>
+
+  <!-- Shield body -->
+  <path d="M28,18 L102,18 L102,82 Q102,114 65,118 Q28,114 28,82 Z" fill="#161b22" stroke="#1f6feb" stroke-width="2"/>
+
+  <!-- Shield inner glow -->
+  <path d="M35,24 L95,24 L95,80 Q95,108 65,112 Q35,108 35,80 Z" fill="none" stroke="#1f6feb" stroke-width="0.5" opacity="0.4"/>
+
+  <!-- Lock shackle -->
+  <path d="M53,66 L53,57 Q53,46 65,46 Q77,46 77,57 L77,66"
+        fill="none" stroke="#58a6ff" stroke-width="3.5" stroke-linecap="round"/>
+
+  <!-- Lock body -->
+  <rect x="48" y="64" width="34" height="26" rx="5" fill="#1f6feb"/>
+
+  <!-- Lock keyhole -->
+  <circle cx="65" cy="76" r="5" fill="#0d1117"/>
+  <rect x="62.5" y="76" width="5" height="9" rx="2" fill="#0d1117"/>
+
+  <!-- Decorative dots top-right corner -->
+  <circle cx="530" cy="20" r="2.5" fill="#1f6feb" opacity="0.6"/>
+  <circle cx="543" cy="20" r="2.5" fill="#1f6feb" opacity="0.4"/>
+  <circle cx="556" cy="20" r="2.5" fill="#1f6feb" opacity="0.2"/>
+  <circle cx="530" cy="33" r="2.5" fill="#1f6feb" opacity="0.4"/>
+  <circle cx="543" cy="33" r="2.5" fill="#1f6feb" opacity="0.2"/>
+  <circle cx="530" cy="46" r="2.5" fill="#1f6feb" opacity="0.2"/>
+
+  <!-- Main title -->
+  <text x="128" y="74"
+        font-family="ui-monospace, SFMono-Regular, Menlo, 'Courier New', monospace"
+        font-size="40" font-weight="700" fill="#e6edf3" letter-spacing="-1">rbac</text>
+  <text x="223" y="74"
+        font-family="ui-monospace, SFMono-Regular, Menlo, 'Courier New', monospace"
+        font-size="40" font-weight="300" fill="#58a6ff" letter-spacing="-1">-manager</text>
+
+  <!-- Subtitle -->
+  <text x="129" y="100"
+        font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, sans-serif"
+        font-size="13" fill="#8b949e" letter-spacing="2.5">KUBERNETES RBAC OPERATOR</text>
+
+  <!-- Version badge -->
+  <rect x="129" y="110" width="52" height="18" rx="9" fill="#1f6feb" opacity="0.15"/>
+  <text x="155" y="123"
+        font-family="ui-monospace, monospace"
+        font-size="11" fill="#58a6ff" text-anchor="middle" letter-spacing="0.5">v1alpha1</text>
+</svg>
