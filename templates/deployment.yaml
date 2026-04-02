@@ -41,6 +41,27 @@ spec:
             - --health-probe-bind-address=:8081
             - --leader-elect={{ .Values.operator.leaderElection | default false }}
             - --zap-log-level={{ .Values.operator.logLevel | default "info" }}
+            {{- if .Values.webhook.enabled }}
+            - --enable-webhook=true
+            {{- end }}
+          ports:
+            - name: metrics
+              containerPort: {{ .Values.metrics.port | default 8080 }}
+              protocol: TCP
+            - name: health
+              containerPort: 8081
+              protocol: TCP
+            {{- if .Values.webhook.enabled }}
+            - name: webhook
+              containerPort: 9443
+              protocol: TCP
+            {{- end }}
+          {{- if .Values.webhook.enabled }}
+          volumeMounts:
+            - name: webhook-tls
+              mountPath: /tmp/k8s-webhook-server/serving-certs
+              readOnly: true
+          {{- end }}
           {{- if .Values.livenessProbe.enabled }}
           livenessProbe:
             {{- toYaml (omit .Values.livenessProbe "enabled") | nindent 12 }}
@@ -62,4 +83,10 @@ spec:
       {{- with .Values.tolerations }}
       tolerations:
         {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if .Values.webhook.enabled }}
+      volumes:
+        - name: webhook-tls
+          secret:
+            secretName: {{ include "rbac-manager.fullname" . }}-webhook-tls
       {{- end }}

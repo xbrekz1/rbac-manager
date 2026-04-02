@@ -35,6 +35,7 @@ func main() {
 		metricsAddr          string
 		healthProbeAddr      string
 		enableLeaderElection bool
+		enableWebhook        bool
 	)
 
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
@@ -42,6 +43,8 @@ func main() {
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
+	flag.BoolVar(&enableWebhook, "enable-webhook", false,
+		"Enable the validating webhook server. Requires TLS certificates in /tmp/k8s-webhook-server/serving-certs.")
 
 	opts := zap.Options{
 		Development: false,
@@ -71,6 +74,14 @@ func main() {
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "AccessGrant")
 		os.Exit(1)
+	}
+
+	if enableWebhook {
+		if err := (&rbacmanagerv1alpha1.AccessGrant{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "AccessGrant")
+			os.Exit(1)
+		}
+		setupLog.Info("webhook server enabled")
 	}
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {

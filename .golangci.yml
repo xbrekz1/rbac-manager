@@ -1,0 +1,97 @@
+# golangci-lint configuration for rbac-manager
+run:
+  timeout: 5m
+  tests: true
+  modules-download-mode: readonly
+
+linters:
+  enable:
+    - errcheck       # Check for unchecked errors
+    - gosimple       # Simplify code
+    - govet          # Vet examines Go source code
+    - ineffassign    # Detect ineffectual assignments
+    - staticcheck    # Static analysis checks
+    - unused         # Check for unused code
+    - gofmt          # Check if code is formatted
+    - goimports      # Check imports formatting
+    - misspell       # Spell checker
+    - revive         # Fast, configurable linter
+    - unconvert      # Remove unnecessary type conversions
+    - unparam        # Report unused function parameters
+    - gosec          # Security checks
+    - exportloopref  # Check for loop variable references
+    - gocritic       # Opinionated Go linter
+    - gocyclo        # Cyclomatic complexity
+    - bodyclose      # HTTP response body close check
+    - nilerr         # Find nil error returns
+    - noctx          # Find sending http request without context
+    - thelper        # Detect test helpers without t.Helper()
+    - predeclared    # Find shadowed predeclared identifiers
+
+linters-settings:
+  errcheck:
+    check-type-assertions: true
+    check-blank: true
+    exclude-functions:
+      - (io.Closer).Close
+
+  govet:
+    enable-all: true
+    disable:
+      - shadow # Too many false positives
+
+  gocyclo:
+    min-complexity: 15
+
+  gosec:
+    excludes:
+      - G404 # Insecure random number source (use crypto/rand) - not needed for non-crypto
+
+  revive:
+    rules:
+      - name: exported
+        disabled: false
+        arguments:
+          - "checkPrivateReceivers"
+          - "sayRepetitiveInsteadOfStutters"
+
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - style
+      - performance
+    disabled-checks:
+      - unnamedResult
+      - hugeParam
+
+issues:
+  exclude-rules:
+    # Exclude some linters from running on tests files
+    - path: _test\.go
+      linters:
+        - gocyclo
+        - errcheck
+        - gosec
+        - gocritic
+
+    # Exclude generated files
+    - path: zz_generated\.deepcopy\.go
+      linters:
+        - all
+
+    # Allow dot imports in Ginkgo/Gomega tests
+    - path: _test\.go
+      text: "should not use dot imports"
+      linters:
+        - revive
+
+  # Maximum issues count per one linter. Set to 0 to disable
+  max-issues-per-linter: 0
+
+  # Maximum count of issues with the same text. Set to 0 to disable
+  max-same-issues: 0
+
+output:
+  format: colored-line-number
+  print-issued-lines: true
+  print-linter-name: true

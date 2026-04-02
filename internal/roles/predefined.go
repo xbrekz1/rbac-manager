@@ -6,12 +6,23 @@ import (
 
 // predefinedRoles maps role names to their policy rules.
 //
+// This package provides 10 predefined RBAC roles covering common access patterns
+// in Kubernetes environments. Roles are organized into a hierarchy for standard
+// development workflows, plus specialized roles for CI/CD, debugging, and auditing.
+//
 // Role hierarchy (least → most privileged):
 //
 //	reader → viewer → developer → developer-extended → operator → maintainer
-//	deployer  (CI/CD, orthogonal)
-//	debugger  (runtime debugging, orthogonal)
-//	auditor   (read-only audit, orthogonal)
+//
+// Specialized roles (orthogonal to hierarchy):
+//
+//	deployer  (CI/CD pipelines)
+//	debugger  (runtime debugging, incident response)
+//	auditor   (security review, compliance)
+//	cluster-admin (full cluster access)
+//
+// Each role is designed with the principle of least privilege, granting only
+// the permissions necessary for its intended use case.
 var predefinedRoles = map[string][]rbacv1.PolicyRule{
 
 	// reader — минимальный доступ на чтение.
@@ -404,8 +415,26 @@ var rolesNeedingNamespaceViewer = map[string]bool{
 	"developer-extended": true,
 }
 
-// GetPredefinedRules returns the policy rules for a given predefined role name.
-// Returns the rules and true if the role exists, or nil and false otherwise.
+// GetPredefinedRules returns the RBAC policy rules for a given predefined role name.
+//
+// This function looks up a role by name and returns its associated PolicyRules.
+// The rules define what Kubernetes API operations (verbs) can be performed on
+// which resources (apiGroups and resources).
+//
+// Parameters:
+//   - role: The name of the predefined role (e.g., "developer", "viewer", "maintainer")
+//
+// Returns:
+//   - []rbacv1.PolicyRule: The policy rules for the role
+//   - bool: true if the role exists, false otherwise
+//
+// Example:
+//
+//	rules, ok := GetPredefinedRules("developer")
+//	if !ok {
+//	    return fmt.Errorf("unknown role")
+//	}
+//	// Use rules to create a Role or ClusterRole
 func GetPredefinedRules(role string) ([]rbacv1.PolicyRule, bool) {
 	rules, ok := predefinedRoles[role]
 	if !ok {
@@ -414,8 +443,25 @@ func GetPredefinedRules(role string) ([]rbacv1.PolicyRule, bool) {
 	return rules, true
 }
 
-// NeedsNamespaceViewer returns true if the given role requires a namespace-viewer ClusterRole
-// (i.e., a ClusterRole granting list/get/watch on namespaces).
+// NeedsNamespaceViewer returns true if the given role requires additional ClusterRole
+// permissions to list/get/watch namespaces.
+//
+// Some roles (viewer, developer-extended) need cluster-level permissions to view
+// the list of namespaces, which is required by tools like OpenLens for proper
+// sidebar navigation. When this function returns true, the controller will create
+// an additional ClusterRole with namespace viewing permissions.
+//
+// Parameters:
+//   - role: The name of the role to check
+//
+// Returns:
+//   - bool: true if the role needs namespace viewer permissions, false otherwise
+//
+// Example:
+//
+//	if NeedsNamespaceViewer("developer-extended") {
+//	    // Create additional ClusterRole for namespace visibility
+//	}
 func NeedsNamespaceViewer(role string) bool {
 	return rolesNeedingNamespaceViewer[role]
 }

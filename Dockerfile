@@ -1,4 +1,4 @@
-FROM golang:1.22-alpine AS builder
+FROM golang:1.22.0-alpine AS builder
 ARG TARGETOS
 ARG TARGETARCH
 WORKDIR /workspace

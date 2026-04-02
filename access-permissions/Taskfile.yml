@@ -11,29 +11,334 @@ tasks:
     cmds:
       - task --list
 
-  generate-kubeconfig:
-    desc: "Сгенерировать KUBECONFIG для AccessGrant"
-    cmds:
-      - echo "👤 Обработка AccessGrant {{.ACCESSGRANT}}"
-      - kubectl get accessgrant {{.ACCESSGRANT}} -n {{.RBAC_NAMESPACE}}
-      - echo "🔑 Генерация KUBECONFIG..."
-      - |
-        SA_NAME=$(kubectl get accessgrant {{.ACCESSGRANT}} -n {{.RBAC_NAMESPACE}} -o jsonpath="{.spec.serviceAccountName}")
-        echo "ServiceAccount: $SA_NAME"
-        {{.SCRIPTS_DIR}}/generate-kubeconfig.sh -o {{.DOWNLOADS_DIR}} $SA_NAME
-        echo "🎉 Готово! Проверьте {{.DOWNLOADS_DIR}}"
+  # ========== Основные команды ==========
 
-  test-access-grant:
-    desc: "Протестировать доступ для AccessGrant"
+  generate:
+    desc: "Сгенерировать kubeconfig для AccessGrant (CLI метод - рекомендуется)"
     cmds:
-      - echo "🧪 Тестирование AccessGrant {{.ACCESSGRANT}}"
       - |
-        SA_NAME=$(kubectl get accessgrant {{.ACCESSGRANT}} -n {{.RBAC_NAMESPACE}} -o jsonpath="{.spec.serviceAccountName}")
-        echo "Проверка аутентификации:"
-        kubectl --kubeconfig={{.DOWNLOADS_DIR}}/kubeconfig-$SA_NAME.yaml auth whoami
+        echo "🚀 Генерация kubeconfig для AccessGrant: {{.ACCESSGRANT}}"
         echo ""
-        echo "Проверка доступа к namespaces:"
-        kubectl --kubeconfig={{.DOWNLOADS_DIR}}/kubeconfig-$SA_NAME.yaml get namespaces
+
+        # Проверяем, установлена ли CLI утилита
+        if ! command -v kubeconfigctl &> /dev/null; then
+          echo "❌ kubeconfigctl не установлена"
+          echo ""
+          echo "Установите её командой:"
+          echo "  make build-kubeconfigctl"
+          echo ""
+          echo "Или используйте legacy скрипт:"
+          echo "  task generate-legacy ACCESSGRANT={{.ACCESSGRANT}}"
+          exit 1
+        fi
+
+        # Генерируем kubeconfig
+        kubeconfigctl generate {{.ACCESSGRANT}} \
+          -n {{.RBAC_NAMESPACE}} \
+          -o {{.DOWNLOADS_DIR}} \
+          --duration {{.DURATION | default "8760h"}} \
+          --default-namespace {{.DEFAULT_NS | default "default"}}
+
+  generate-legacy:
+    desc: "Сгенерировать kubeconfig через bash скрипт (legacy метод)"
+    cmds:
+      - echo "👤 Генерация kubeconfig для AccessGrant: {{.ACCESSGRANT}}"
+      - kubectl get accessgrant {{.ACCESSGRANT}} -n {{.RBAC_NAMESPACE}}
+      - echo ""
+      - echo "🔑 Генерация через скрипт..."
+      - |
+        SA_NAME=$(kubectl get accessgrant {{.ACCESSGRANT}} -n {{.RBAC_NAMESPACE}} -o jsonpath="{.status.serviceAccount}")
+        if [ -z "$SA_NAME" ]; then
+          SA_NAME=$(kubectl get accessgrant {{.ACCESSGRANT}} -n {{.RBAC_NAMESPACE}} -o jsonpath="{.spec.serviceAccountName}")
+        fi
+        if [ -z "$SA_NAME" ]; then
+          SA_NAME="rbac-{{.ACCESSGRANT}}"
+        fi
+
+        echo "ServiceAccount: $SA_NAME"
         echo ""
-        echo "Проверка доступа к подам в default:"
-        kubectl --kubeconfig={{.DOWNLOADS_DIR}}/kubeconfig-$SA_NAME.yaml get pods -n default
+
+        {{.SCRIPTS_DIR}}/generate-kubeconfig.sh \
+          -n {{.RBAC_NAMESPACE}} \
+          -o {{.DOWNLOADS_DIR}} \
+          -d {{.DURATION | default "8760h"}} \
+          --default-namespace {{.DEFAULT_NS | default "default"}} \
+          $SA_NAME
+
+        echo ""
+        echo "✅ Готово! Проверьте {{.DOWNLOADS_DIR}}"
+
+  list:
+    desc: "Показать все AccessGrants"
+    cmds:
+      - |
+        if command -v kubeconfigctl &> /dev/null; then
+          kubeconfigctl list -n {{.RBAC_NAMESPACE}}
+        else
+          echo "📋 AccessGrants в namespace {{.RBAC_NAMESPACE}}:"
+          echo ""
+          kubectl get accessgrants -n {{.RBAC_NAMESPACE}}
+        fi
+
+  list-all:
+    desc: "Показать все AccessGrants во всех namespace"
+    cmds:
+      - |
+        if command -v kubeconfigctl &> /dev/null; then
+          kubeconfigctl list --all-namespaces
+        else
+          echo "📋 Все AccessGrants:"
+          echo ""
+          kubectl get accessgrants -A
+        fi
+
+  test:
+    desc: "Протестировать сгенерированный kubeconfig"
+    cmds:
+      - |
+        KUBECONFIG_FILE="{{.DOWNLOADS_DIR}}/kubeconfig-{{.ACCESSGRANT}}.yaml"
+
+        if [ ! -f "$KUBECONFIG_FILE" ]; then
+          echo "❌ Kubeconfig не найден: $KUBECONFIG_FILE"
+          echo ""
+          echo "Сгенерируйте его командой:"
+          echo "  task generate ACCESSGRANT={{.ACCESSGRANT}}"
+          exit 1
+        fi
+
+        echo "🧪 Тестирование kubeconfig: $KUBECONFIG_FILE"
+        echo ""
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo "1️⃣  Проверка аутентификации:"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        kubectl --kubeconfig=$KUBECONFIG_FILE auth whoami
+        echo ""
+
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo "2️⃣  Проверка доступа к namespaces:"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        kubectl --kubeconfig=$KUBECONFIG_FILE get namespaces --no-headers | head -10
+        echo ""
+
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo "3️⃣  Проверка базовых прав:"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo -n "get pods: "
+        kubectl --kubeconfig=$KUBECONFIG_FILE auth can-i get pods
+        echo -n "get namespaces: "
+        kubectl --kubeconfig=$KUBECONFIG_FILE auth can-i get namespaces
+        echo -n "delete pods: "
+        kubectl --kubeconfig=$KUBECONFIG_FILE auth can-i delete pods
+        echo ""
+
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo "✅ Тестирование завершено"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+  # ========== Batch операции ==========
+
+  batch-generate:
+    desc: "Массовая генерация kubeconfig для всех AccessGrants"
+    cmds:
+      - |
+        echo "🔄 Массовая генерация kubeconfig..."
+        echo ""
+
+        ACCESS_GRANTS=$(kubectl get accessgrants -n {{.RBAC_NAMESPACE}} -o jsonpath='{.items[*].metadata.name}')
+
+        if [ -z "$ACCESS_GRANTS" ]; then
+          echo "❌ AccessGrants не найдены в namespace {{.RBAC_NAMESPACE}}"
+          exit 1
+        fi
+
+        COUNT=0
+        SUCCESS=0
+        FAILED=0
+
+        for AG in $ACCESS_GRANTS; do
+          COUNT=$((COUNT+1))
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "📝 [$COUNT] Обработка: $AG"
+          echo ""
+
+          if command -v kubeconfigctl &> /dev/null; then
+            if kubeconfigctl generate $AG -n {{.RBAC_NAMESPACE}} -o {{.DOWNLOADS_DIR}} --duration {{.DURATION | default "8760h"}}; then
+              SUCCESS=$((SUCCESS+1))
+              echo "✅ Успешно"
+            else
+              FAILED=$((FAILED+1))
+              echo "❌ Ошибка"
+            fi
+          else
+            echo "⚠️  kubeconfigctl не установлена, используйте task generate ACCESSGRANT=$AG"
+            FAILED=$((FAILED+1))
+          fi
+          echo ""
+        done
+
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo "🎉 Готово!"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo "Обработано: $COUNT"
+        echo "Успешно: $SUCCESS"
+        echo "Ошибок: $FAILED"
+        echo ""
+        echo "Файлы сохранены в: {{.DOWNLOADS_DIR}}"
+        ls -lh {{.DOWNLOADS_DIR}}/kubeconfig-*.yaml 2>/dev/null || echo "Нет сгенерированных файлов"
+
+  # ========== Утилиты ==========
+
+  show-info:
+    desc: "Показать информацию об AccessGrant"
+    cmds:
+      - |
+        echo "📋 Информация об AccessGrant: {{.ACCESSGRANT}}"
+        echo ""
+        kubectl get accessgrant {{.ACCESSGRANT}} -n {{.RBAC_NAMESPACE}} -o yaml
+
+  show-sa:
+    desc: "Показать информацию о ServiceAccount"
+    cmds:
+      - |
+        SA_NAME=$(kubectl get accessgrant {{.ACCESSGRANT}} -n {{.RBAC_NAMESPACE}} -o jsonpath="{.status.serviceAccount}")
+        if [ -z "$SA_NAME" ]; then
+          SA_NAME="rbac-{{.ACCESSGRANT}}"
+        fi
+
+        echo "🔑 ServiceAccount: $SA_NAME"
+        echo ""
+        kubectl get serviceaccount $SA_NAME -n {{.RBAC_NAMESPACE}} -o yaml
+
+  cleanup-kubeconfigs:
+    desc: "Удалить все сгенерированные kubeconfig файлы"
+    cmds:
+      - |
+        echo "🗑️  Удаление kubeconfig файлов из {{.DOWNLOADS_DIR}}"
+        echo ""
+
+        COUNT=$(ls -1 {{.DOWNLOADS_DIR}}/kubeconfig-*.yaml 2>/dev/null | wc -l)
+
+        if [ "$COUNT" -eq 0 ]; then
+          echo "Нет файлов для удаления"
+          exit 0
+        fi
+
+        echo "Найдено файлов: $COUNT"
+        ls -lh {{.DOWNLOADS_DIR}}/kubeconfig-*.yaml
+        echo ""
+
+        read -p "Удалить все эти файлы? [y/N]: " -n 1 -r
+        echo
+
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+          rm -f {{.DOWNLOADS_DIR}}/kubeconfig-*.yaml
+          rm -f {{.DOWNLOADS_DIR}}/kubeconfig-*-instructions.txt
+          echo "✅ Файлы удалены"
+        else
+          echo "❌ Отменено"
+        fi
+
+  install-cli:
+    desc: "Установить kubeconfigctl CLI утилиту"
+    cmds:
+      - |
+        echo "📦 Установка kubeconfigctl..."
+        echo ""
+
+        cd {{.TASKFILE_DIR}}/..
+
+        if ! command -v go &> /dev/null; then
+          echo "❌ Go не установлен"
+          echo "Установите Go: https://golang.org/doc/install"
+          exit 1
+        fi
+
+        echo "Сборка..."
+        go build -o kubeconfigctl ./cmd/kubeconfigctl/
+
+        echo "Установка в /usr/local/bin..."
+        sudo mv kubeconfigctl /usr/local/bin/
+
+        echo ""
+        echo "✅ kubeconfigctl установлена!"
+        echo ""
+        kubeconfigctl version
+
+  # ========== Help ==========
+
+  help:
+    desc: "Показать подробную справку"
+    cmds:
+      - |
+        cat << 'EOF'
+
+        ╔═══════════════════════════════════════════════════════════════╗
+        ║                                                               ║
+        ║            RBAC Manager - Kubeconfig Generator                ║
+        ║                                                               ║
+        ╚═══════════════════════════════════════════════════════════════╝
+
+        ОСНОВНЫЕ КОМАНДЫ:
+        ─────────────────
+
+        task generate ACCESSGRANT=<name>
+          Сгенерировать kubeconfig для указанного AccessGrant
+          Опции:
+            DURATION=720h        - Срок действия токена (по умолчанию: 8760h = 1 год)
+            DEFAULT_NS=dev       - Namespace по умолчанию в kubeconfig
+
+        task list
+          Показать все AccessGrants в namespace rbac-manager
+
+        task test ACCESSGRANT=<name>
+          Протестировать сгенерированный kubeconfig
+
+        BATCH ОПЕРАЦИИ:
+        ───────────────
+
+        task batch-generate
+          Массовая генерация kubeconfig для всех AccessGrants
+
+        УТИЛИТЫ:
+        ────────
+
+        task show-info ACCESSGRANT=<name>
+          Показать полную информацию об AccessGrant
+
+        task show-sa ACCESSGRANT=<name>
+          Показать информацию о ServiceAccount
+
+        task cleanup-kubeconfigs
+          Удалить все сгенерированные kubeconfig файлы
+
+        task install-cli
+          Установить kubeconfigctl CLI утилиту
+
+        ПРИМЕРЫ:
+        ────────
+
+        # Сгенерировать kubeconfig с токеном на 30 дней
+        task generate ACCESSGRANT=john-dev DURATION=720h
+
+        # Протестировать доступ
+        task test ACCESSGRANT=john-dev
+
+        # Массовая генерация для всех
+        task batch-generate
+
+        # Показать все AccessGrants
+        task list
+
+        ФАЙЛЫ:
+        ──────
+
+        Сгенерированные файлы сохраняются в: ~/Downloads/
+        - kubeconfig-<name>.yaml          - Основной файл
+        - kubeconfig-<name>-instructions.txt - Инструкции
+
+        ДОКУМЕНТАЦИЯ:
+        ─────────────
+
+        Полная документация: ../docs/KUBECONFIG_GENERATION.md
+
+        EOF

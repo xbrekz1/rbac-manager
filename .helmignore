@@ -1,1 +1,52 @@
+# Patterns to ignore when building Helm chart packages.
+# Follows the same rules as .gitignore.
+
+# Compiled binaries (exceed Helm 5MB file limit)
+bin/
+manager
+kubeconfigctl
+*.exe
+
+# Go artifacts
+*.test
+*.out
+coverage/
+coverage.txt
+
+# Helm packages
 *.tgz
+
+# Source code (not part of the chart)
+cmd/
+api/
+internal/
+go.mod
+go.sum
+
+# Development tooling
+vendor/
+.golangci.yml
+Makefile
+operator.sh
+
+# CI/CD
+.github/
+.gitignore
+.helmignore
+
+# Documentation and scripts not needed in chart
+docs/
+access-permissions/
+examples.yaml
+
+# Homebrew formula (not a chart resource)
+Formula/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp

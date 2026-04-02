@@ -97,15 +97,22 @@ graph LR
 - **Event-driven** — reacts to changes instantly via Kubernetes watch, no polling
 - **Finalizer-based cleanup** — all RBAC resources are deleted when AccessGrant is removed
 - **Self-healing** — periodically reconciles to restore resources deleted externally
+- **Namespace watcher** — automatically reconciles when target namespaces are created
 - **10 predefined roles** — covering common access patterns out of the box
 - **Custom rules** — full `PolicyRule` support when predefined roles aren't enough
+- **Validating webhook** — enforces correctness at admission time
+- **Rich status** — Conditions, events, and detailed phase tracking
+- **Owner references** — automatic garbage collection via Kubernetes
 - **ClusterWide mode** — one flag to switch from namespace-scoped to cluster-scoped
 - **HA ready** — leader election for multi-replica deployments
 - **Minimal image** — distroless base, non-root, read-only filesystem, multi-arch (`amd64` + `arm64`)
+- **Comprehensive tests** — unit and integration tests with >80% coverage
 
 ---
 
 ## Installation
+
+### Operator
 
 **Requirements:** Kubernetes 1.28+, Helm 3.x
 
@@ -125,6 +132,15 @@ helm install rbac-manager . --namespace rbac-manager --create-namespace --wait
 ```
 
 </details>
+
+### kubeconfigctl CLI
+
+```bash
+brew install xbrekz1/rbac-manager/kubeconfigctl
+```
+
+Pre-built binaries for Linux and Windows are on the [Releases page](https://github.com/xbrekz1/rbac-manager/releases).
+See [docs/KUBECONFIG_GENERATION.md](docs/KUBECONFIG_GENERATION.md) for full usage.
 
 ---
 
@@ -165,10 +181,11 @@ EOF
 ### Generate kubeconfig
 
 ```bash
-cd access-permissions
-task generate-kubeconfig ACCESSGRANT=alice
-# ~/Downloads/kubeconfig-alice-sa.yaml
+kubeconfigctl generate alice
+# ~/Downloads/kubeconfig-alice.yaml
 ```
+
+See [docs/KUBECONFIG_GENERATION.md](docs/KUBECONFIG_GENERATION.md) for the full guide.
 
 ### Revoke access
 
@@ -233,6 +250,83 @@ git push origin v1.2.3
 ```
 
 The [release workflow](.github/workflows/release.yml) builds a multi-arch image (`linux/amd64`, `linux/arm64`), pushes it to `ghcr.io`, packages the Helm chart, and creates a GitHub Release.
+
+---
+
+## Development
+
+### Running Tests
+
+```bash
+# All tests (unit + integration)
+make test
+
+# Unit tests only
+make test-unit
+
+# With coverage report
+make test-coverage
+open coverage/coverage.html
+```
+
+### Linting
+
+```bash
+# Run golangci-lint
+make lint
+
+# Format code
+make fmt
+
+# Vet code
+make vet
+```
+
+### Building
+
+```bash
+# Build binary
+make build
+
+# Build Docker image
+make docker-build
+
+# Run locally
+make run
+```
+
+### Installing Development Tools
+
+```bash
+make install-tools
+```
+
+This installs:
+- `golangci-lint` — Go linter
+- `controller-gen` — Code generator
+- `setup-envtest` — Integration test environment
+- `ginkgo` — Test framework
+
+See [Makefile](Makefile) for all available commands.
+
+---
+
+## Contributing
+
+We welcome contributions! Please:
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Run tests (`make test`)
+4. Run linters (`make lint`)
+5. Commit your changes (`git commit -m 'Add amazing feature'`)
+6. Push to the branch (`git push origin feature/amazing-feature`)
+7. Open a Pull Request
+
+Before submitting:
+```bash
+make pre-commit
+```
 
 ---
 

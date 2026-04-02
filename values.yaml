@@ -4,7 +4,7 @@ replicaCount: 1
 image:
   repository: ghcr.io/xbrekz1/rbac-manager
   pullPolicy: IfNotPresent
-  tag: "1.0.1"
+  tag: ""
 
 imagePullSecrets: []
 nameOverride: ""
@@ -83,3 +83,23 @@ metrics:
 # RBAC permissions for the operator
 rbac:
   create: true
+
+# Validating webhook configuration.
+# Requires TLS — use cert-manager (recommended) or provide caBundle manually.
+webhook:
+  # Set to true to deploy the ValidatingWebhookConfiguration and webhook Service.
+  enabled: false
+  # Seconds before the API server times out a webhook call.
+  timeoutSeconds: 10
+  # cert-manager integration (recommended for production).
+  certManager:
+    enabled: false
+    # Set createSelfSignedIssuer: true for development (self-signed).
+    # For production, set to false and provide your own issuerName.
+    createSelfSignedIssuer: false
+    issuerKind: Issuer
+    issuerName: ""
+  # Manual TLS: base64-encoded CA bundle injected into ValidatingWebhookConfiguration.
+  # Used when certManager.enabled is false. Must be the base64-encoded PEM CA certificate.
+  # Example: caBundle: "$(cat ca.crt | base64 -w 0)"
+  # caBundle: ""
