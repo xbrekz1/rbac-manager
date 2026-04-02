@@ -2,8 +2,8 @@ apiVersion: v2
 name: rbac-manager
 description: Production-grade RBAC Manager Operator for Kubernetes. Simplify access management with a single AccessGrant resource.
 type: application
-version: 1.0.1
-appVersion: "v1.0.1"
+version: 1.1.0
+appVersion: "v1.1.0"
 keywords:
   - rbac
   - access-control
