@@ -19,7 +19,6 @@ linters:
     - unconvert      # Remove unnecessary type conversions
     - unparam        # Report unused function parameters
     - gosec          # Security checks
-    - exportloopref  # Check for loop variable references
     - gocritic       # Opinionated Go linter
     - gocyclo        # Cyclomatic complexity
     - bodyclose      # HTTP response body close check
@@ -63,6 +62,7 @@ linters-settings:
     disabled-checks:
       - unnamedResult
       - hugeParam
+      - uncheckedInlineErr # intentional: client.IgnoreNotFound(err) pattern in cleanup loops
 
 issues:
   exclude-rules:
@@ -84,6 +84,14 @@ issues:
       text: "should not use dot imports"
       linters:
         - revive
+
+    # kubeconfigctl CLI intentionally uses subprocess calls to kubectl and
+    # exported types in main package — gosec/revive/unparam false positives here
+    - path: cmd/kubeconfigctl/
+      linters:
+        - gosec
+        - revive
+        - unparam
 
   # Maximum issues count per one linter. Set to 0 to disable
   max-issues-per-linter: 0

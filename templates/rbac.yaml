@@ -20,52 +20,34 @@ metadata:
   labels:
     {{- include "rbac-manager.labels" . | nindent 4 }}
 rules:
-  # Core operator permissions for AccessGrant CRD
+  # AccessGrant CRD — operator's own resource
   - apiGroups: ["rbacmanager.io"]
     resources: ["accessgrants"]
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
   - apiGroups: ["rbacmanager.io"]
     resources: ["accessgrants/status"]
     verbs: ["get", "update", "patch"]
+  - apiGroups: ["rbacmanager.io"]
+    resources: ["accessgrants/finalizers"]
+    verbs: ["update"]
 
-  # ServiceAccount management
+  # ServiceAccount management — operator creates SAs for AccessGrants
   - apiGroups: [""]
     resources: ["serviceaccounts"]
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
 
-  # Role and RoleBinding management (escalate allows granting permissions the operator holds)
+  # RBAC resource management.
+  # escalate: allows creating Roles with permissions the operator itself doesn't hold.
+  # bind:     allows creating RoleBindings for any Role, not just those the operator holds.
+  # Both are required for the operator to manage arbitrary RBAC grants.
   - apiGroups: ["rbac.authorization.k8s.io"]
     resources: ["roles", "rolebindings"]
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete", "escalate", "bind"]
-
-  # ClusterRole and ClusterRoleBinding management
   - apiGroups: ["rbac.authorization.k8s.io"]
     resources: ["clusterroles", "clusterrolebindings"]
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete", "escalate", "bind"]
 
-  # All resources that can be granted via predefined roles
-  - apiGroups: [""]
-    resources: ["pods", "pods/log", "pods/exec", "pods/portforward", "services", "endpoints",
-                "configmaps", "secrets", "serviceaccounts", "persistentvolumeclaims",
-                "events", "resourcequotas", "limitranges"]
-    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
-  - apiGroups: ["apps"]
-    resources: ["deployments", "statefulsets", "daemonsets", "replicasets"]
-    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
-  - apiGroups: ["batch"]
-    resources: ["jobs", "cronjobs"]
-    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
-  - apiGroups: ["networking.k8s.io"]
-    resources: ["ingresses", "networkpolicies"]
-    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
-  - apiGroups: ["autoscaling"]
-    resources: ["horizontalpodautoscalers"]
-    verbs: ["get", "list", "watch", "update", "patch"]
-  - apiGroups: ["policy"]
-    resources: ["poddisruptionbudgets"]
-    verbs: ["get", "list", "watch"]
-
-  # Namespace access (to verify target namespaces exist)
+  # Namespace read access — needed to verify target namespaces exist before creating Roles
   - apiGroups: [""]
     resources: ["namespaces"]
     verbs: ["get", "list", "watch"]

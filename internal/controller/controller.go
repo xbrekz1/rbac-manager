@@ -54,7 +54,7 @@ type AccessGrantReconciler struct {
 // +kubebuilder:rbac:groups=rbacmanager.io,resources=accessgrants/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=rbacmanager.io,resources=accessgrants/finalizers,verbs=update
 // +kubebuilder:rbac:groups="",resources=serviceaccounts,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=roles;rolebindings;clusterroles;clusterrolebindings,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=roles;rolebindings;clusterroles;clusterrolebindings,verbs=get;list;watch;create;update;patch;delete;escalate;bind
 // +kubebuilder:rbac:groups="",resources=namespaces,verbs=get;list;watch
 // +kubebuilder:rbac:groups="",resources=events,verbs=create;patch
 // +kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,verbs=get;list;watch;create;update;patch;delete
@@ -233,6 +233,7 @@ func (r *AccessGrantReconciler) findAccessGrantsForNamespace(ctx context.Context
 	// List all AccessGrants
 	agList := &rbacmanagerv1alpha1.AccessGrantList{}
 	if err := r.List(ctx, agList); err != nil {
+		log.FromContext(ctx).Error(err, "Failed to list AccessGrants for namespace watch trigger")
 		return nil
 	}
 

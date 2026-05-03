@@ -47,89 +47,83 @@ func (r *AccessGrant) ValidateDelete() (admission.Warnings, error) {
 
 // validateAccessGrant contains the validation logic for AccessGrant.
 func (r *AccessGrant) validateAccessGrant() (admission.Warnings, error) {
-	var warnings admission.Warnings
+	if err := validateRoleSpec(r); err != nil {
+		return nil, err
+	}
+	if err := validateCustomRules(r); err != nil {
+		return nil, err
+	}
+	warnings, err := validateNamespacingSpec(r)
+	if err != nil {
+		return nil, err
+	}
+	if err := validateNames(r); err != nil {
+		return nil, err
+	}
+	return warnings, nil
+}
 
-	// Validate that either Role or CustomRules is specified, but not both
+func validateRoleSpec(r *AccessGrant) error {
 	if r.Spec.Role != "" && len(r.Spec.CustomRules) > 0 {
-		return warnings, fmt.Errorf("either spec.role or spec.customRules must be specified, but not both")
+		return fmt.Errorf("either spec.role or spec.customRules must be specified, but not both")
 	}
-
 	if r.Spec.Role == "" && len(r.Spec.CustomRules) == 0 {
-		return warnings, fmt.Errorf("either spec.role or spec.customRules must be specified")
+		return fmt.Errorf("either spec.role or spec.customRules must be specified")
 	}
-
-	// Validate predefined role exists
 	if r.Spec.Role != "" {
 		validRoles := map[PredefinedRole]bool{
-			RoleReader:            true,
-			RoleViewer:            true,
-			RoleDeveloper:         true,
-			RoleDeveloperExtended: true,
-			RoleDeployer:          true,
-			RoleDebugger:          true,
-			RoleOperator:          true,
-			RoleAuditor:           true,
-			RoleMaintainer:        true,
-			RoleClusterAdmin:      true,
+			RoleReader: true, RoleViewer: true, RoleDeveloper: true,
+			RoleDeveloperExtended: true, RoleDeployer: true, RoleDebugger: true,
+			RoleOperator: true, RoleAuditor: true, RoleMaintainer: true, RoleClusterAdmin: true,
 		}
-
 		if !validRoles[r.Spec.Role] {
-			return warnings, fmt.Errorf("unknown predefined role: %q", r.Spec.Role)
+			return fmt.Errorf("unknown predefined role: %q", r.Spec.Role)
 		}
 	}
+	return nil
+}
 
-	// Validate CustomRules
-	if len(r.Spec.CustomRules) > 0 {
-		for i, rule := range r.Spec.CustomRules {
-			if len(rule.Verbs) == 0 {
-				return warnings, fmt.Errorf("customRules[%d]: verbs must be specified", i)
-			}
-
-			if len(rule.Resources) == 0 && len(rule.NonResourceURLs) == 0 {
-				return warnings, fmt.Errorf("customRules[%d]: either resources or nonResourceURLs must be specified", i)
-			}
-
-			// Reject wildcard combinations that would grant unrestricted cluster access.
-			hasWildcardVerbs := len(rule.Verbs) == 1 && rule.Verbs[0] == "*"
-			hasWildcardResources := len(rule.Resources) == 1 && rule.Resources[0] == "*"
-			hasWildcardGroups := len(rule.APIGroups) == 1 && rule.APIGroups[0] == "*"
-			if hasWildcardVerbs && hasWildcardResources && hasWildcardGroups {
-				return warnings, fmt.Errorf("customRules[%d]: wildcard apiGroups/resources/verbs is not allowed; use predefined role 'cluster-admin' with clusterWide: true instead", i)
-			}
+func validateCustomRules(r *AccessGrant) error {
+	for i, rule := range r.Spec.CustomRules {
+		if len(rule.Verbs) == 0 {
+			return fmt.Errorf("customRules[%d]: verbs must be specified", i)
+		}
+		if len(rule.Resources) == 0 && len(rule.NonResourceURLs) == 0 {
+			return fmt.Errorf("customRules[%d]: either resources or nonResourceURLs must be specified", i)
+		}
+		// Reject wildcard combinations that would grant unrestricted cluster access.
+		isAllWildcard := len(rule.Verbs) == 1 && rule.Verbs[0] == "*" &&
+			len(rule.Resources) == 1 && rule.Resources[0] == "*" &&
+			len(rule.APIGroups) == 1 && rule.APIGroups[0] == "*"
+		if isAllWildcard {
+			return fmt.Errorf("customRules[%d]: wildcard apiGroups/resources/verbs is not allowed; use predefined role 'cluster-admin' with clusterWide: true instead", i)
 		}
 	}
+	return nil
+}
 
-	// Validate ClusterWide mode
+func validateNamespacingSpec(r *AccessGrant) (admission.Warnings, error) {
+	var warnings admission.Warnings
 	if r.Spec.ClusterWide {
-		// Warn if namespaces are specified with ClusterWide
 		if len(r.Spec.Namespaces) > 0 {
 			warnings = append(warnings, "spec.namespaces is ignored when spec.clusterWide is true")
 		}
-
-		// Warn if using cluster-admin without ClusterWide
 	} else if r.Spec.Role == RoleClusterAdmin {
 		warnings = append(warnings, "role 'cluster-admin' is recommended to be used with clusterWide: true for full cluster access")
 	}
-
-	// Validate namespace list
-	if !r.Spec.ClusterWide && len(r.Spec.Namespaces) == 0 && r.Spec.Role != "" {
-		return warnings, fmt.Errorf("spec.namespaces must be specified when clusterWide is false")
+	if !r.Spec.ClusterWide && len(r.Spec.Namespaces) == 0 {
+		return nil, fmt.Errorf("spec.namespaces must be specified when clusterWide is false")
 	}
-
-	// Validate ServiceAccount name length.
-	if r.Spec.ServiceAccountName != "" {
-		if len(r.Spec.ServiceAccountName) > 253 {
-			return warnings, fmt.Errorf("spec.serviceAccountName is too long (max 253 characters)")
-		}
-	}
-
-	// Validate that the generated role name (rbac-<name>) fits within the 253-char limit.
-	// Also account for the "-namespace-viewer" suffix used for viewer/developer-extended roles.
-	const maxK8sName = 253
-	generatedRoleName := "rbac-" + r.Name
-	if len(generatedRoleName)+len("-namespace-viewer") > maxK8sName {
-		return warnings, fmt.Errorf("AccessGrant name %q is too long: generated role names would exceed %d characters", r.Name, maxK8sName)
-	}
-
 	return warnings, nil
+}
+
+func validateNames(r *AccessGrant) error {
+	if len(r.Spec.ServiceAccountName) > 253 {
+		return fmt.Errorf("spec.serviceAccountName is too long (max 253 characters)")
+	}
+	const maxK8sName = 253
+	if len("rbac-"+r.Name)+len("-namespace-viewer") > maxK8sName {
+		return fmt.Errorf("AccessGrant name %q is too long: generated role names would exceed %d characters", r.Name, maxK8sName)
+	}
+	return nil
 }

@@ -1,7 +1,8 @@
 # Binaries
 bin/
 manager
-kubeconfigctl
+/kubeconfigctl
+cmd/kubeconfigctl/kubeconfigctl
 *.exe
 
 # Go

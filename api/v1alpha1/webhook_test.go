@@ -174,6 +174,28 @@ func TestAccessGrantValidateCreate(t *testing.T) {
 			errContains: "spec.namespaces must be specified when clusterWide is false",
 		},
 		{
+			name: "error: customRules without namespaces when not clusterWide",
+			ag: &AccessGrant{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-grant",
+					Namespace: "default",
+				},
+				Spec: AccessGrantSpec{
+					CustomRules: []rbacv1.PolicyRule{
+						{
+							APIGroups: []string{""},
+							Resources: []string{"pods"},
+							Verbs:     []string{"get", "list"},
+						},
+					},
+					ClusterWide: false,
+					// No Namespaces — should be rejected
+				},
+			},
+			wantErr:     true,
+			errContains: "spec.namespaces must be specified when clusterWide is false",
+		},
+		{
 			name: "warning: namespaces with clusterWide",
 			ag: &AccessGrant{
 				ObjectMeta: metav1.ObjectMeta{

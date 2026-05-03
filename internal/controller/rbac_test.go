@@ -143,12 +143,12 @@ func TestResourceLabels(t *testing.T) {
 				},
 			},
 			expectLabels: map[string]string{
-				managedByLabel:     "other-manager", // user label takes precedence
+				managedByLabel:     managerValue, // system label wins even when user tries to override
 				accessGrantLabel:   "test-grant",
 				accessGrantNsLabel: "test-ns",
 				"custom-label":     "custom-value",
 			},
-			checkManagedBy: false, // because user overrode it
+			checkManagedBy: true,
 			checkGrant:     true,
 		},
 	}

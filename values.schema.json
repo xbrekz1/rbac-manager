@@ -1,0 +1,162 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "rbac-manager Helm values",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "replicaCount": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Number of operator replicas. Use >1 with operator.leaderElection=true."
+    },
+    "image": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "repository": { "type": "string" },
+        "pullPolicy": {
+          "type": "string",
+          "enum": ["Always", "IfNotPresent", "Never"]
+        },
+        "tag": { "type": "string" }
+      },
+      "required": ["repository", "pullPolicy"]
+    },
+    "imagePullSecrets": {
+      "type": "array",
+      "items": { "type": "object" }
+    },
+    "nameOverride":     { "type": "string" },
+    "fullnameOverride": { "type": "string" },
+    "serviceAccount": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "create":      { "type": "boolean" },
+        "annotations": { "type": "object" },
+        "name":        { "type": "string" }
+      }
+    },
+    "podAnnotations": { "type": "object" },
+    "podLabels":      { "type": "object" },
+    "podSecurityContext": {
+      "type": "object",
+      "properties": {
+        "runAsNonRoot": { "type": "boolean" },
+        "runAsUser":    { "type": "integer" },
+        "runAsGroup":   { "type": "integer" },
+        "fsGroup":      { "type": "integer" },
+        "seccompProfile": { "type": "object" }
+      }
+    },
+    "securityContext": {
+      "type": "object",
+      "properties": {
+        "allowPrivilegeEscalation": { "type": "boolean" },
+        "capabilities":             { "type": "object" },
+        "readOnlyRootFilesystem":   { "type": "boolean" },
+        "runAsNonRoot":             { "type": "boolean" },
+        "runAsUser":                { "type": "integer" },
+        "seccompProfile":           { "type": "object" }
+      }
+    },
+    "resources": {
+      "type": "object",
+      "properties": {
+        "limits":   { "type": "object" },
+        "requests": { "type": "object" }
+      }
+    },
+    "nodeSelector": { "type": "object" },
+    "tolerations":  { "type": "array" },
+    "affinity":     { "type": "object" },
+    "operator": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "logLevel": {
+          "type": "string",
+          "enum": ["debug", "info", "error"],
+          "description": "Zap log level."
+        },
+        "leaderElection": {
+          "type": "boolean",
+          "description": "Enable leader election. Required when replicaCount > 1."
+        }
+      }
+    },
+    "livenessProbe": {
+      "type": "object",
+      "properties": {
+        "enabled":             { "type": "boolean" },
+        "initialDelaySeconds": { "type": "integer", "minimum": 0 },
+        "periodSeconds":       { "type": "integer", "minimum": 1 }
+      }
+    },
+    "readinessProbe": {
+      "type": "object",
+      "properties": {
+        "enabled":             { "type": "boolean" },
+        "initialDelaySeconds": { "type": "integer", "minimum": 0 },
+        "periodSeconds":       { "type": "integer", "minimum": 1 }
+      }
+    },
+    "metrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "port": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535
+        }
+      }
+    },
+    "rbac": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "create": { "type": "boolean" }
+      }
+    },
+    "podDisruptionBudget": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable PodDisruptionBudget. Recommended when replicaCount > 1."
+        },
+        "minAvailable": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Minimum number of pods that must remain available during disruptions."
+        }
+      }
+    },
+    "webhook": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "timeoutSeconds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 30
+        },
+        "certManager": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled":                  { "type": "boolean" },
+            "createSelfSignedIssuer":   { "type": "boolean" },
+            "issuerKind":               { "type": "string" },
+            "issuerName":               { "type": "string" }
+          }
+        },
+        "caBundle": { "type": "string" }
+      }
+    }
+  }
+}

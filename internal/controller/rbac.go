@@ -20,10 +20,10 @@ import (
 // reconcileResult holds the output of a successful reconciliation.
 // It contains information about created resources that will be stored in the AccessGrant status.
 type reconcileResult struct {
-	namespaces         []string // List of namespaces where RBAC resources were created
-	skippedNamespaces  []string // List of namespaces that were skipped because they don't exist yet
-	saName             string   // Name of the created ServiceAccount
-	clusterRole        string   // Name of the ClusterRole (if created)
+	namespaces        []string // List of namespaces where RBAC resources were created
+	skippedNamespaces []string // List of namespaces that were skipped because they don't exist yet
+	saName            string   // Name of the created ServiceAccount
+	clusterRole       string   // Name of the ClusterRole (if created)
 }
 
 // reconcileRBAC orchestrates all RBAC resource creation/updates for an AccessGrant.
@@ -141,8 +141,8 @@ func getPolicyRules(ag *rbacmanagerv1alpha1.AccessGrant) ([]rbacv1.PolicyRule, e
 //   - rbacmanager.io/access-grant: name of the parent AccessGrant
 //   - rbacmanager.io/access-grant-namespace: namespace of the parent AccessGrant
 //
-// User-defined labels from spec.labels are merged, allowing them to override standard labels
-// if there are conflicts (though this is not recommended).
+// User-defined labels from spec.labels are merged in first; system labels are written last
+// and always take precedence over user labels with the same key.
 func resourceLabels(ag *rbacmanagerv1alpha1.AccessGrant) map[string]string {
 	lbls := make(map[string]string, len(ag.Spec.Labels)+3)
 	// User labels first so system labels always take precedence.

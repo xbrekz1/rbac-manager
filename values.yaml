@@ -84,6 +84,12 @@ metrics:
 rbac:
   create: true
 
+# PodDisruptionBudget — prevents eviction from taking down the last operator pod.
+# Enable when replicaCount > 1 and operator.leaderElection is true.
+podDisruptionBudget:
+  enabled: false
+  minAvailable: 1
+
 # Validating webhook configuration.
 # Requires TLS — use cert-manager (recommended) or provide caBundle manually.
 webhook:

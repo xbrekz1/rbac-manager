@@ -111,6 +111,7 @@ jobs:
     permissions:
       contents: read
       packages: write
+      security-events: write
 
     steps:
       - uses: actions/checkout@v4
@@ -141,7 +142,44 @@ jobs:
             type=semver,pattern={{major}}
             type=raw,value=latest
 
-      - name: Build and push
+      # Build amd64 image locally for scanning — multi-arch load is not supported,
+      # so we scan one arch before doing the full push.
+      - name: Build image for scanning (amd64)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
+          push: false
+          load: true
+          tags: scan-target:latest
+          cache-from: type=gha
+
+      - name: Scan image with Trivy
+        uses: aquasecurity/trivy-action@0.32.0
+        with:
+          image-ref: scan-target:latest
+          format: sarif
+          output: trivy-results.sarif
+          ignore-unfixed: true
+          vuln-type: os,library
+          severity: CRITICAL,HIGH
+
+      - name: Upload Trivy scan results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-results.sarif
+
+      - name: Fail if CRITICAL vulnerabilities found
+        uses: aquasecurity/trivy-action@0.32.0
+        with:
+          image-ref: scan-target:latest
+          format: table
+          exit-code: '1'
+          ignore-unfixed: true
+          vuln-type: os,library
+          severity: CRITICAL
+
+      - name: Build and push (multi-arch)
         uses: docker/build-push-action@v6
         with:
           context: .
