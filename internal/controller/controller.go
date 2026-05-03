@@ -228,7 +228,10 @@ func (r *AccessGrantReconciler) SetupWithManager(mgr ctrl.Manager) error {
 // findAccessGrantsForNamespace returns AccessGrants that reference the given namespace.
 // This enables the controller to reconcile AccessGrants when their target namespaces are created.
 func (r *AccessGrantReconciler) findAccessGrantsForNamespace(ctx context.Context, obj client.Object) []reconcile.Request {
-	namespace := obj.(*corev1.Namespace)
+	namespace, ok := obj.(*corev1.Namespace)
+	if !ok {
+		return nil
+	}
 
 	// List all AccessGrants
 	agList := &rbacmanagerv1alpha1.AccessGrantList{}
@@ -238,7 +241,8 @@ func (r *AccessGrantReconciler) findAccessGrantsForNamespace(ctx context.Context
 	}
 
 	var requests []reconcile.Request
-	for _, ag := range agList.Items {
+	for i := range agList.Items {
+		ag := &agList.Items[i]
 		// Check if this AccessGrant references the namespace
 		for _, ns := range ag.Spec.Namespaces {
 			if ns == namespace.Name {

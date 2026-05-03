@@ -37,7 +37,8 @@ linters-settings:
   govet:
     enable-all: true
     disable:
-      - shadow # Too many false positives
+      - shadow        # Too many false positives
+      - fieldalignment # Micro-optimization, not worth reordering CRD/API types
 
   gocyclo:
     min-complexity: 15

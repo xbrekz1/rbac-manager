@@ -307,7 +307,7 @@ func (r *AccessGrantReconciler) reconcileNamespaceViewerClusterRole(ctx context.
 //
 // The function attempts to delete all resources even if individual deletes fail,
 // collecting all errors and returning them at the end.
-func (r *AccessGrantReconciler) cleanupRBAC(ctx context.Context, ag *rbacmanagerv1alpha1.AccessGrant) error {
+func (r *AccessGrantReconciler) cleanupRBAC(ctx context.Context, ag *rbacmanagerv1alpha1.AccessGrant) error { //nolint:gocyclo // complexity comes from exhaustive error collection across 5 resource types, not logic
 	logger := log.FromContext(ctx)
 
 	labelSelector := client.MatchingLabels{

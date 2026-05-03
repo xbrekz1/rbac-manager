@@ -221,7 +221,7 @@ func runGenerate(_ *cobra.Command, args []string) error {
 	}
 
 	// Create output directory if it doesn't exist
-	if err := os.MkdirAll(outDir, 0750); err != nil {
+	if err := os.MkdirAll(outDir, 0o750); err != nil {
 		return fmt.Errorf("failed to create output directory: %v", err)
 	}
 
@@ -229,7 +229,7 @@ func runGenerate(_ *cobra.Command, args []string) error {
 	filename := fmt.Sprintf("kubeconfig-%s.yaml", accessGrantName)
 	outputPath := filepath.Join(outDir, filename)
 
-	if err := os.WriteFile(outputPath, kubeconfigData, 0600); err != nil {
+	if err := os.WriteFile(outputPath, kubeconfigData, 0o600); err != nil {
 		return fmt.Errorf("failed to write kubeconfig file: %v", err)
 	}
 
@@ -238,7 +238,7 @@ func runGenerate(_ *cobra.Command, args []string) error {
 	// Generate instructions file
 	instructionsPath := filepath.Join(outDir, fmt.Sprintf("kubeconfig-%s-instructions.txt", accessGrantName))
 	instructions := generateInstructions(accessGrantName, saName, role, duration, clusterInfo.ClusterName, outputPath)
-	if err := os.WriteFile(instructionsPath, []byte(instructions), 0600); err != nil {
+	if err := os.WriteFile(instructionsPath, []byte(instructions), 0o600); err != nil {
 		fmt.Printf("   ⚠ Warning: Could not create instructions file: %v\n", err)
 	} else {
 		fmt.Printf("   ✓ Instructions saved: %s\n\n", instructionsPath)
@@ -284,10 +284,10 @@ func runList(_ *cobra.Command, _ []string) error {
 			return fmt.Errorf("failed to list namespaces: %v", err)
 		}
 
-		for _, ns := range nsList.Items {
-			ags, err := listAccessGrantsInNamespace(ns.Name)
+		for i := range nsList.Items {
+			ags, err := listAccessGrantsInNamespace(nsList.Items[i].Name)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "Warning: failed to list AccessGrants in namespace %q: %v\n", ns.Name, err)
+				fmt.Fprintf(os.Stderr, "Warning: failed to list AccessGrants in namespace %q: %v\n", nsList.Items[i].Name, err)
 				continue
 			}
 			accessGrants = append(accessGrants, ags...)
@@ -472,14 +472,14 @@ func getClusterInfo(config *clientcmdapi.Config) (*ClusterInfo, error) {
 		return nil, fmt.Errorf("no current context set in kubeconfig")
 	}
 
-	context, ok := config.Contexts[currentContext]
+	clusterCtx, ok := config.Contexts[currentContext]
 	if !ok {
 		return nil, fmt.Errorf("context %q not found", currentContext)
 	}
 
-	cluster, ok := config.Clusters[context.Cluster]
+	cluster, ok := config.Clusters[clusterCtx.Cluster]
 	if !ok {
-		return nil, fmt.Errorf("cluster %q not found", context.Cluster)
+		return nil, fmt.Errorf("cluster %q not found", clusterCtx.Cluster)
 	}
 
 	// Get CA data
@@ -535,10 +535,7 @@ func listAccessGrantsInNamespace(namespace string) ([]AccessGrantInfo, error) {
 	cmd := exec.Command("kubectl", "get", "accessgrants", "-n", namespace,
 		"-o", "jsonpath={range .items[*]}{.metadata.name},{.status.serviceAccount},{.spec.role},{.status.phase},{.metadata.namespace}{'\\n'}{end}")
 
-	output, err := cmd.Output()
-	if err != nil {
-		return nil, nil // Ignore errors, might not have AccessGrants
-	}
+	output, _ := cmd.Output() // kubectl error means no AccessGrants found — treat as empty
 
 	var accessGrants []AccessGrantInfo
 	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
