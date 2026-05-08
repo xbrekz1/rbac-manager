@@ -1,7 +1,7 @@
 class Kubeconfigctl < Formula
   desc "Generate kubeconfig files for rbac-manager AccessGrants"
   homepage "https://github.com/xbrekz1/rbac-manager"
-  version "1.1.1"
+  version "1.1.2"
   license "MIT"
 
   on_macos do
