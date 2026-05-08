@@ -491,7 +491,7 @@ func getClusterInfo(config *clientcmdapi.Config) (*ClusterInfo, error) {
 	}
 
 	return &ClusterInfo{
-		ClusterName: context.Cluster,
+		ClusterName: clusterCtx.Cluster,
 		ServerURL:   cluster.Server,
 		CAData:      caData,
 	}, nil
