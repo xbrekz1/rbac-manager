@@ -214,6 +214,18 @@ func TestRoleHierarchy(t *testing.T) {
 		t.Error("developer should have access to secrets (read)")
 	}
 
+	// Developer-extended permissions
+	devExtRules, _ := GetPredefinedRules("developer-extended")
+	if !hasGetListWatchOnPods(devExtRules) {
+		t.Error("developer-extended should have get/list/watch on pods")
+	}
+	if !hasExecOnPods(devExtRules) {
+		t.Error("developer-extended should have exec on pods")
+	}
+	if !hasUpdatePatchOnDeployments(devExtRules) {
+		t.Error("developer-extended should have update/patch on deployments")
+	}
+
 	// Operator permissions
 	opRules, _ := GetPredefinedRules("operator")
 	if !hasGetListWatchOnPods(opRules) {

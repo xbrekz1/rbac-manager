@@ -121,6 +121,7 @@ var predefinedRoles = map[string][]rbacv1.PolicyRule{
 	// То же что developer, но дополнительно получает ClusterRole на просмотр
 	// namespace-ов — это необходимо для корректной навигации в OpenLens
 	// (без этого список неймспейсов в левом меню пустой).
+	// Также может рестартовать deployments через kubectl rollout restart.
 	"developer-extended": {
 		{
 			APIGroups: []string{""},
@@ -144,7 +145,12 @@ var predefinedRoles = map[string][]rbacv1.PolicyRule{
 		},
 		{
 			APIGroups: []string{"apps"},
-			Resources: []string{"deployments", "statefulsets", "daemonsets", "replicasets"},
+			Resources: []string{"deployments"},
+			Verbs:     []string{"get", "list", "watch", "update", "patch"},
+		},
+		{
+			APIGroups: []string{"apps"},
+			Resources: []string{"statefulsets", "daemonsets", "replicasets"},
 			Verbs:     []string{"get", "list", "watch"},
 		},
 		{
