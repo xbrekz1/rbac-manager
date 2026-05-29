@@ -12,6 +12,13 @@ import (
 
 var accessgrantlog = logf.Log.WithName("accessgrant-resource")
 
+// rbacResources are resources that grant RBAC management capabilities.
+// Blocking these in customRules prevents privilege escalation to cluster-admin.
+var rbacResources = map[string]bool{
+	"roles": true, "rolebindings": true,
+	"clusterroles": true, "clusterrolebindings": true,
+}
+
 // SetupWebhookWithManager registers the webhook for AccessGrant in the manager.
 func (r *AccessGrant) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
@@ -109,16 +116,12 @@ func validateCustomRules(r *AccessGrant) error {
 			return fmt.Errorf("customRules[%d]: wildcard apiGroups/resources/verbs is not allowed; use predefined role 'cluster-admin' with clusterWide: true instead", i)
 		}
 		// Reject rules that grant access to RBAC resources (privilege escalation).
-		rbacResources := map[string]bool{
-			"roles": true, "rolebindings": true,
-			"clusterroles": true, "clusterrolebindings": true,
-		}
 		for _, grp := range rule.APIGroups {
 			if grp != "rbac.authorization.k8s.io" && grp != "*" {
 				continue
 			}
 			for _, res := range rule.Resources {
-				if rbacResources[res] {
+				if res == "*" || rbacResources[res] {
 					return fmt.Errorf("customRules[%d]: RBAC resources (%s) are not allowed in customRules; use predefined roles instead", i, res)
 				}
 			}
