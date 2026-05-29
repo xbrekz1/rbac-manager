@@ -337,6 +337,89 @@ func TestAccessGrantValidateCreate(t *testing.T) {
 			},
 			wantErr: false,
 		},
+		{
+			name: "error: customRules with wildcard combination",
+			ag: &AccessGrant{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-grant",
+					Namespace: "default",
+				},
+				Spec: AccessGrantSpec{
+					CustomRules: []rbacv1.PolicyRule{
+						{
+							APIGroups: []string{"*"},
+							Resources: []string{"*"},
+							Verbs:     []string{"*"},
+						},
+					},
+					Namespaces: []string{"test-ns"},
+				},
+			},
+			wantErr:     true,
+			errContains: "wildcard apiGroups/resources/verbs is not allowed",
+		},
+		{
+			name: "error: customRules granting clusterroles",
+			ag: &AccessGrant{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-grant",
+					Namespace: "default",
+				},
+				Spec: AccessGrantSpec{
+					CustomRules: []rbacv1.PolicyRule{
+						{
+							APIGroups: []string{"rbac.authorization.k8s.io"},
+							Resources: []string{"clusterroles"},
+							Verbs:     []string{"get", "list"},
+						},
+					},
+					Namespaces: []string{"test-ns"},
+				},
+			},
+			wantErr:     true,
+			errContains: "RBAC resources",
+		},
+		{
+			name: "error: customRules granting rolebindings with wildcard apiGroup",
+			ag: &AccessGrant{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-grant",
+					Namespace: "default",
+				},
+				Spec: AccessGrantSpec{
+					CustomRules: []rbacv1.PolicyRule{
+						{
+							APIGroups: []string{"*"},
+							Resources: []string{"rolebindings"},
+							Verbs:     []string{"*"},
+						},
+					},
+					Namespaces: []string{"test-ns"},
+				},
+			},
+			wantErr:     true,
+			errContains: "RBAC resources",
+		},
+		{
+			name: "valid: customRules with non-RBAC resources in core group",
+			ag: &AccessGrant{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-grant",
+					Namespace: "default",
+				},
+				Spec: AccessGrantSpec{
+					CustomRules: []rbacv1.PolicyRule{
+						{
+							APIGroups: []string{""},
+							Resources: []string{"pods", "configmaps"},
+							Verbs:     []string{"get", "list"},
+						},
+					},
+					Namespaces: []string{"test-ns"},
+				},
+			},
+			wantErr: false,
+		},
 	}
 
 	for _, tt := range tests {
