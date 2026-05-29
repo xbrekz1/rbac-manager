@@ -3,6 +3,7 @@ package v1alpha1
 import (
 	"fmt"
 
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -101,19 +102,34 @@ func validateRoleSpec(r *AccessGrant) error {
 }
 
 func validateCustomRules(r *AccessGrant) error {
-	for i, rule := range r.Spec.CustomRules {
+	return validatePolicyRules(r.Spec.CustomRules, "customRules")
+}
+
+// validatePolicyRules validates a slice of RBAC policy rules for safety.
+// Shared by AccessGrant customRules and RoleTemplate rules.
+func validatePolicyRules(rules []rbacv1.PolicyRule, pathPrefix string) error {
+	for i, rule := range rules {
 		if len(rule.Verbs) == 0 {
-			return fmt.Errorf("customRules[%d]: verbs must be specified", i)
+			return fmt.Errorf("%s[%d]: verbs must be specified", pathPrefix, i)
 		}
 		if len(rule.Resources) == 0 && len(rule.NonResourceURLs) == 0 {
-			return fmt.Errorf("customRules[%d]: either resources or nonResourceURLs must be specified", i)
+			return fmt.Errorf("%s[%d]: either resources or nonResourceURLs must be specified", pathPrefix, i)
 		}
-		// Reject wildcard combinations that would grant unrestricted cluster access.
 		isAllWildcard := len(rule.Verbs) == 1 && rule.Verbs[0] == "*" &&
 			len(rule.Resources) == 1 && rule.Resources[0] == "*" &&
 			len(rule.APIGroups) == 1 && rule.APIGroups[0] == "*"
 		if isAllWildcard {
-			return fmt.Errorf("customRules[%d]: wildcard apiGroups/resources/verbs is not allowed; use predefined role 'cluster-admin' with clusterWide: true instead", i)
+			return fmt.Errorf("%s[%d]: wildcard apiGroups/resources/verbs is not allowed; use predefined role 'cluster-admin' instead", pathPrefix, i)
+		}
+		for _, grp := range rule.APIGroups {
+			if grp != "rbac.authorization.k8s.io" && grp != "*" {
+				continue
+			}
+			for _, res := range rule.Resources {
+				if res == "*" || rbacResources[res] {
+					return fmt.Errorf("%s[%d]: RBAC resources (%s) are not allowed; use predefined roles instead", pathPrefix, i, res)
+				}
+			}
 		}
 	}
 	return nil

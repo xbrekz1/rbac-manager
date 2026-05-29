@@ -45,31 +45,8 @@ func (r *RoleTemplate) validateRoleTemplate() (admission.Warnings, error) {
 	if len(r.Spec.Rules) == 0 {
 		return nil, fmt.Errorf("spec.rules must contain at least one policy rule")
 	}
-	for i, rule := range r.Spec.Rules {
-		if len(rule.Verbs) == 0 {
-			return nil, fmt.Errorf("spec.rules[%d]: verbs must be specified", i)
-		}
-		if len(rule.Resources) == 0 && len(rule.NonResourceURLs) == 0 {
-			return nil, fmt.Errorf("spec.rules[%d]: either resources or nonResourceURLs must be specified", i)
-		}
-		// Reject wildcard combinations that would grant unrestricted cluster access.
-		isAllWildcard := len(rule.Verbs) == 1 && rule.Verbs[0] == "*" &&
-			len(rule.Resources) == 1 && rule.Resources[0] == "*" &&
-			len(rule.APIGroups) == 1 && rule.APIGroups[0] == "*"
-		if isAllWildcard {
-			return nil, fmt.Errorf("spec.rules[%d]: wildcard apiGroups/resources/verbs is not allowed; use predefined role 'cluster-admin' instead", i)
-		}
-		// Reject rules that grant access to RBAC resources (privilege escalation).
-		for _, grp := range rule.APIGroups {
-			if grp != "rbac.authorization.k8s.io" && grp != "*" {
-				continue
-			}
-			for _, res := range rule.Resources {
-				if res == "*" || rbacResources[res] {
-					return nil, fmt.Errorf("spec.rules[%d]: RBAC resources (%s) are not allowed; use predefined roles instead", i, res)
-				}
-			}
-		}
+	if err := validatePolicyRules(r.Spec.Rules, "spec.rules"); err != nil {
+		return nil, err
 	}
 	return nil, nil
 }
