@@ -53,7 +53,7 @@ func (r *AccessGrantReconciler) reconcileRBAC(ctx context.Context, ag *rbacmanag
 		return nil, fmt.Errorf("reconciling ServiceAccount: %w", err)
 	}
 
-	policyRules, err := getPolicyRules(ag)
+	policyRules, needsNsViewer, err := r.resolveRole(ctx, ag)
 	if err != nil {
 		return nil, err
 	}
@@ -73,8 +73,8 @@ func (r *AccessGrantReconciler) reconcileRBAC(ctx context.Context, ag *rbacmanag
 		return result, nil
 	}
 
-	// Namespace-viewer ClusterRole (for viewer and developer-extended).
-	if roles.NeedsNamespaceViewer(string(ag.Spec.Role)) {
+	// Namespace-viewer ClusterRole (for viewer, developer-extended, or RoleTemplate with flag set).
+	if needsNsViewer {
 		nsViewerName := roleName + "-namespace-viewer"
 		if err := r.reconcileNamespaceViewerClusterRole(ctx, ag, nsViewerName, saName); err != nil {
 			return nil, fmt.Errorf("reconciling namespace-viewer ClusterRole: %w", err)
@@ -112,24 +112,27 @@ func (r *AccessGrantReconciler) reconcileRBAC(ctx context.Context, ag *rbacmanag
 	return result, nil
 }
 
-// getPolicyRules resolves the effective RBAC rules for an AccessGrant.
-// It returns the policy rules from either a predefined role or custom rules.
-//
-// If spec.role is specified, it looks up the corresponding predefined rules.
-// If spec.customRules is specified, it returns those rules directly.
-// Returns an error if neither is specified or if the predefined role doesn't exist.
-func getPolicyRules(ag *rbacmanagerv1alpha1.AccessGrant) ([]rbacv1.PolicyRule, error) {
+// resolveRole resolves the effective RBAC rules and namespace-viewer flag for an AccessGrant.
+// Priority: spec.roleTemplate → spec.role → spec.customRules.
+func (r *AccessGrantReconciler) resolveRole(ctx context.Context, ag *rbacmanagerv1alpha1.AccessGrant) ([]rbacv1.PolicyRule, bool, error) {
+	if ag.Spec.RoleTemplateName != "" {
+		rt := &rbacmanagerv1alpha1.RoleTemplate{}
+		if err := r.Get(ctx, types.NamespacedName{Name: ag.Spec.RoleTemplateName, Namespace: ag.Namespace}, rt); err != nil {
+			return nil, false, fmt.Errorf("fetching RoleTemplate %q: %w", ag.Spec.RoleTemplateName, err)
+		}
+		return rt.Spec.Rules, rt.Spec.NeedsNamespaceViewer, nil
+	}
 	if ag.Spec.Role != "" {
 		rules, ok := roles.GetPredefinedRules(string(ag.Spec.Role))
 		if !ok {
-			return nil, fmt.Errorf("unknown predefined role: %q", ag.Spec.Role)
+			return nil, false, fmt.Errorf("unknown predefined role: %q", ag.Spec.Role)
 		}
-		return rules, nil
+		return rules, roles.NeedsNamespaceViewer(string(ag.Spec.Role)), nil
 	}
 	if len(ag.Spec.CustomRules) > 0 {
-		return ag.Spec.CustomRules, nil
+		return ag.Spec.CustomRules, false, nil
 	}
-	return nil, fmt.Errorf("either spec.role or spec.customRules must be specified")
+	return nil, false, fmt.Errorf("one of spec.role, spec.roleTemplate, or spec.customRules must be specified")
 }
 
 // resourceLabels returns the standard labels for managed RBAC resources, merged with user labels.

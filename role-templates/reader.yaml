@@ -1,0 +1,21 @@
+apiVersion: rbacmanager.io/v1alpha1
+kind: RoleTemplate
+metadata:
+  name: reader
+  namespace: rbac-manager
+  annotations:
+    description: "Минимальный доступ на чтение workload-ресурсов без логов и secrets"
+spec:
+  rules:
+    - apiGroups: [""]
+      resources: ["pods", "services", "endpoints", "persistentvolumeclaims"]
+      verbs: ["get", "list", "watch"]
+    - apiGroups: [""]
+      resources: ["configmaps"]
+      verbs: ["get", "list", "watch"]
+    - apiGroups: ["apps"]
+      resources: ["deployments", "statefulsets", "daemonsets", "replicasets"]
+      verbs: ["get", "list", "watch"]
+    - apiGroups: [""]
+      resources: ["events"]
+      verbs: ["get", "list", "watch"]

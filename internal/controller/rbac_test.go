@@ -1,33 +1,64 @@
 package controller
 
 import (
+	"context"
 	"testing"
 
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	rbacmanagerv1alpha1 "github.com/xbrekz1/rbac-manager/api/v1alpha1"
 )
 
-func TestGetPolicyRules(t *testing.T) {
+func newTestReconciler(objs ...client.Object) *AccessGrantReconciler {
+	s := runtime.NewScheme()
+	_ = rbacmanagerv1alpha1.AddToScheme(s)
+	fakeClient := fake.NewClientBuilder().WithScheme(s).WithObjects(objs...).Build()
+	return &AccessGrantReconciler{Client: fakeClient, Scheme: s}
+}
+
+func TestResolveRole(t *testing.T) {
 	tests := []struct {
-		name        string
-		ag          *rbacmanagerv1alpha1.AccessGrant
-		expectError bool
-		expectRules int
+		name           string
+		ag             *rbacmanagerv1alpha1.AccessGrant
+		extraObjs      []client.Object
+		expectError    bool
+		expectRules    int
+		expectNsViewer bool
 	}{
 		{
-			name: "predefined role returns rules",
+			name: "predefined developer role returns 6 rules",
 			ag: &rbacmanagerv1alpha1.AccessGrant{
 				Spec: rbacmanagerv1alpha1.AccessGrantSpec{
 					Role: rbacmanagerv1alpha1.RoleDeveloper,
 				},
 			},
-			expectError: false,
-			expectRules: 6, // developer role has 6 rules
+			expectRules:    6,
+			expectNsViewer: false,
 		},
 		{
-			name: "custom rules returns rules",
+			name: "predefined viewer role sets needsNamespaceViewer",
+			ag: &rbacmanagerv1alpha1.AccessGrant{
+				Spec: rbacmanagerv1alpha1.AccessGrantSpec{
+					Role: rbacmanagerv1alpha1.RoleViewer,
+				},
+			},
+			expectNsViewer: true,
+		},
+		{
+			name: "predefined developer-extended role sets needsNamespaceViewer",
+			ag: &rbacmanagerv1alpha1.AccessGrant{
+				Spec: rbacmanagerv1alpha1.AccessGrantSpec{
+					Role: rbacmanagerv1alpha1.RoleDeveloperExtended,
+				},
+			},
+			expectNsViewer: true,
+		},
+		{
+			name: "custom rules returned as-is with no namespace viewer",
 			ag: &rbacmanagerv1alpha1.AccessGrant{
 				Spec: rbacmanagerv1alpha1.AccessGrantSpec{
 					CustomRules: []rbacv1.PolicyRule{
@@ -39,11 +70,83 @@ func TestGetPolicyRules(t *testing.T) {
 					},
 				},
 			},
-			expectError: false,
-			expectRules: 1,
+			expectRules:    1,
+			expectNsViewer: false,
 		},
 		{
-			name: "unknown role returns error",
+			name: "roleTemplate found returns its rules",
+			ag: &rbacmanagerv1alpha1.AccessGrant{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "rbac-manager"},
+				Spec: rbacmanagerv1alpha1.AccessGrantSpec{
+					RoleTemplateName: "my-template",
+				},
+			},
+			extraObjs: []client.Object{
+				&rbacmanagerv1alpha1.RoleTemplate{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "my-template",
+						Namespace: "rbac-manager",
+					},
+					Spec: rbacmanagerv1alpha1.RoleTemplateSpec{
+						Rules: []rbacv1.PolicyRule{
+							{
+								APIGroups: []string{"apps"},
+								Resources: []string{"deployments"},
+								Verbs:     []string{"get", "list", "patch"},
+							},
+							{
+								APIGroups: []string{""},
+								Resources: []string{"pods"},
+								Verbs:     []string{"get", "list"},
+							},
+						},
+					},
+				},
+			},
+			expectRules:    2,
+			expectNsViewer: false,
+		},
+		{
+			name: "roleTemplate with needsNamespaceViewer=true propagates flag",
+			ag: &rbacmanagerv1alpha1.AccessGrant{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "rbac-manager"},
+				Spec: rbacmanagerv1alpha1.AccessGrantSpec{
+					RoleTemplateName: "viewer-template",
+				},
+			},
+			extraObjs: []client.Object{
+				&rbacmanagerv1alpha1.RoleTemplate{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "viewer-template",
+						Namespace: "rbac-manager",
+					},
+					Spec: rbacmanagerv1alpha1.RoleTemplateSpec{
+						NeedsNamespaceViewer: true,
+						Rules: []rbacv1.PolicyRule{
+							{
+								APIGroups: []string{""},
+								Resources: []string{"pods"},
+								Verbs:     []string{"get", "list"},
+							},
+						},
+					},
+				},
+			},
+			expectRules:    1,
+			expectNsViewer: true,
+		},
+		{
+			name: "roleTemplate not found returns error",
+			ag: &rbacmanagerv1alpha1.AccessGrant{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "rbac-manager"},
+				Spec: rbacmanagerv1alpha1.AccessGrantSpec{
+					RoleTemplateName: "missing-template",
+				},
+			},
+			expectError: true,
+		},
+		{
+			name: "unknown predefined role returns error",
 			ag: &rbacmanagerv1alpha1.AccessGrant{
 				Spec: rbacmanagerv1alpha1.AccessGrantSpec{
 					Role: rbacmanagerv1alpha1.PredefinedRole("unknown-role"),
@@ -52,7 +155,7 @@ func TestGetPolicyRules(t *testing.T) {
 			expectError: true,
 		},
 		{
-			name: "neither role nor customRules returns error",
+			name: "nothing set returns error",
 			ag: &rbacmanagerv1alpha1.AccessGrant{
 				Spec: rbacmanagerv1alpha1.AccessGrantSpec{},
 			},
@@ -62,18 +165,20 @@ func TestGetPolicyRules(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			rules, err := getPolicyRules(tt.ag)
+			r := newTestReconciler(tt.extraObjs...)
+			rules, nsViewer, err := r.resolveRole(context.Background(), tt.ag)
 
 			if tt.expectError && err == nil {
 				t.Error("expected error but got none")
 			}
-
 			if !tt.expectError && err != nil {
 				t.Errorf("unexpected error: %v", err)
 			}
-
-			if !tt.expectError && len(rules) != tt.expectRules {
+			if !tt.expectError && tt.expectRules > 0 && len(rules) != tt.expectRules {
 				t.Errorf("expected %d rules, got %d", tt.expectRules, len(rules))
+			}
+			if !tt.expectError && nsViewer != tt.expectNsViewer {
+				t.Errorf("expected needsNamespaceViewer=%v, got %v", tt.expectNsViewer, nsViewer)
 			}
 		})
 	}

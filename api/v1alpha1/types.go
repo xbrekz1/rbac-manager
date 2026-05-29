@@ -30,6 +30,39 @@ const (
 	PhaseFailed  Phase = "Failed"
 )
 
+// RoleTemplateSpec defines the rules for a reusable role template.
+type RoleTemplateSpec struct {
+	// Rules are the RBAC policy rules for this template.
+	Rules []rbacv1.PolicyRule `json:"rules"`
+
+	// NeedsNamespaceViewer grants get/list/watch on namespaces cluster-wide.
+	// Enable this for roles that need namespace listing in tools like OpenLens.
+	// +optional
+	NeedsNamespaceViewer bool `json:"needsNamespaceViewer,omitempty"`
+}
+
+// +kubebuilder:object:root=true
+// +kubebuilder:resource:shortName=rt,scope=Namespaced
+// +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
+
+// RoleTemplate defines a reusable set of RBAC rules that AccessGrants can reference.
+// Changes to a RoleTemplate are automatically propagated to all AccessGrants using it.
+type RoleTemplate struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+
+	Spec RoleTemplateSpec `json:"spec,omitempty"`
+}
+
+// +kubebuilder:object:root=true
+
+// RoleTemplateList contains a list of RoleTemplate.
+type RoleTemplateList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty"`
+	Items           []RoleTemplate `json:"items"`
+}
+
 // AccessGrantSpec defines the desired state of AccessGrant.
 type AccessGrantSpec struct {
 	// Namespaces where RBAC resources will be created.
@@ -40,6 +73,11 @@ type AccessGrantSpec struct {
 	// +kubebuilder:validation:Enum=reader;viewer;developer;developer-extended;deployer;debugger;operator;auditor;maintainer;cluster-admin
 	// +optional
 	Role PredefinedRole `json:"role,omitempty"`
+
+	// RoleTemplate is the name of a RoleTemplate resource in the same namespace.
+	// Mutually exclusive with role and customRules.
+	// +optional
+	RoleTemplateName string `json:"roleTemplate,omitempty"`
 
 	// CustomRules are custom RBAC policy rules. Used when Role is not specified.
 	// +optional

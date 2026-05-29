@@ -64,11 +64,21 @@ func (r *AccessGrant) validateAccessGrant() (admission.Warnings, error) {
 }
 
 func validateRoleSpec(r *AccessGrant) error {
-	if r.Spec.Role != "" && len(r.Spec.CustomRules) > 0 {
-		return fmt.Errorf("either spec.role or spec.customRules must be specified, but not both")
+	set := 0
+	if r.Spec.Role != "" {
+		set++
 	}
-	if r.Spec.Role == "" && len(r.Spec.CustomRules) == 0 {
-		return fmt.Errorf("either spec.role or spec.customRules must be specified")
+	if len(r.Spec.CustomRules) > 0 {
+		set++
+	}
+	if r.Spec.RoleTemplateName != "" {
+		set++
+	}
+	if set > 1 {
+		return fmt.Errorf("only one of spec.role, spec.roleTemplate, or spec.customRules may be specified")
+	}
+	if set == 0 {
+		return fmt.Errorf("one of spec.role, spec.roleTemplate, or spec.customRules must be specified")
 	}
 	if r.Spec.Role != "" {
 		validRoles := map[PredefinedRole]bool{

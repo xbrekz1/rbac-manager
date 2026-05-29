@@ -53,6 +53,7 @@ type AccessGrantReconciler struct {
 // +kubebuilder:rbac:groups=rbacmanager.io,resources=accessgrants,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=rbacmanager.io,resources=accessgrants/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=rbacmanager.io,resources=accessgrants/finalizers,verbs=update
+// +kubebuilder:rbac:groups=rbacmanager.io,resources=roletemplates,verbs=get;list;watch
 // +kubebuilder:rbac:groups="",resources=serviceaccounts,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=roles;rolebindings;clusterroles;clusterrolebindings,verbs=get;list;watch;create;update;patch;delete;escalate;bind
 // +kubebuilder:rbac:groups="",resources=namespaces,verbs=get;list;watch
@@ -222,7 +223,38 @@ func (r *AccessGrantReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			&corev1.Namespace{},
 			handler.EnqueueRequestsFromMapFunc(r.findAccessGrantsForNamespace),
 		).
+		Watches(
+			&rbacmanagerv1alpha1.RoleTemplate{},
+			handler.EnqueueRequestsFromMapFunc(r.findAccessGrantsForRoleTemplate),
+		).
 		Complete(r)
+}
+
+// findAccessGrantsForRoleTemplate returns all AccessGrants in the same namespace that reference the changed RoleTemplate.
+func (r *AccessGrantReconciler) findAccessGrantsForRoleTemplate(ctx context.Context, obj client.Object) []reconcile.Request {
+	rt, ok := obj.(*rbacmanagerv1alpha1.RoleTemplate)
+	if !ok {
+		return nil
+	}
+
+	agList := &rbacmanagerv1alpha1.AccessGrantList{}
+	if err := r.List(ctx, agList, client.InNamespace(rt.Namespace)); err != nil {
+		log.FromContext(ctx).Error(err, "Failed to list AccessGrants for RoleTemplate watch trigger")
+		return nil
+	}
+
+	var requests []reconcile.Request
+	for i := range agList.Items {
+		if agList.Items[i].Spec.RoleTemplateName == rt.Name {
+			requests = append(requests, reconcile.Request{
+				NamespacedName: client.ObjectKey{
+					Name:      agList.Items[i].Name,
+					Namespace: agList.Items[i].Namespace,
+				},
+			})
+		}
+	}
+	return requests
 }
 
 // findAccessGrantsForNamespace returns AccessGrants that reference the given namespace.

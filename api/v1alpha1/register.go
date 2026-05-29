@@ -13,4 +13,5 @@ var (
 
 func init() {
 	SchemeBuilder.Register(&AccessGrant{}, &AccessGrantList{})
+	SchemeBuilder.Register(&RoleTemplate{}, &RoleTemplateList{})
 }

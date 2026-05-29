@@ -169,22 +169,6 @@ setup-envtest: ## Setup envtest binaries
 	@which setup-envtest > /dev/null || go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
 	setup-envtest use
 
-.PHONY: build-kubeconfigctl
-build-kubeconfigctl: ## Build kubeconfigctl CLI tool
-	@echo "Building kubeconfigctl..."
-	cd cmd/kubeconfigctl && $(GOBUILD) -o kubeconfigctl -ldflags="-X main.version=$(VERSION) -X main.commit=$(shell git rev-parse --short HEAD) -X main.date=$(shell date -u +%Y-%m-%dT%H:%M:%SZ)" .
-	@echo "✓ Built: cmd/kubeconfigctl/kubeconfigctl"
-	@echo ""
-	@echo "To install globally:"
-	@echo "  sudo mv cmd/kubeconfigctl/kubeconfigctl /usr/local/bin/"
-
-.PHONY: install-kubeconfigctl
-install-kubeconfigctl: build-kubeconfigctl ## Build and install kubeconfigctl
-	@echo "Installing kubeconfigctl to /usr/local/bin..."
-	sudo mv cmd/kubeconfigctl/kubeconfigctl /usr/local/bin/
-	@echo "✓ Installed!"
-	@echo ""
-	kubeconfigctl version
 
 .PHONY: install-tools
 install-tools: ## Install development tools

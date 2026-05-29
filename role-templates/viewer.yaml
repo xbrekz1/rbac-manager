@@ -1,0 +1,25 @@
+apiVersion: rbacmanager.io/v1alpha1
+kind: RoleTemplate
+metadata:
+  name: viewer
+  namespace: rbac-manager
+  annotations:
+    description: "Просмотр подов, логов и workload-ресурсов. needsNamespaceViewer для OpenLens"
+spec:
+  needsNamespaceViewer: true
+  rules:
+    - apiGroups: [""]
+      resources: ["pods", "services", "endpoints"]
+      verbs: ["get", "list", "watch"]
+    - apiGroups: [""]
+      resources: ["pods/log"]
+      verbs: ["get", "list"]
+    - apiGroups: [""]
+      resources: ["configmaps"]
+      verbs: ["get", "list", "watch"]
+    - apiGroups: ["apps"]
+      resources: ["deployments", "statefulsets", "daemonsets", "replicasets"]
+      verbs: ["get", "list", "watch"]
+    - apiGroups: [""]
+      resources: ["events"]
+      verbs: ["get", "list", "watch"]

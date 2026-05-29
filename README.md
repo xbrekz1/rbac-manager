@@ -99,6 +99,7 @@ graph LR
 - **Self-healing** — periodically reconciles to restore resources deleted externally
 - **Namespace watcher** — automatically reconciles when target namespaces are created
 - **10 predefined roles** — covering common access patterns out of the box
+- **RoleTemplate CRD** — reusable dynamic role definitions; changes propagate instantly to all AccessGrants
 - **Custom rules** — full `PolicyRule` support when predefined roles aren't enough
 - **Validating webhook** — enforces correctness at admission time
 - **Rich status** — Conditions, events, and detailed phase tracking
@@ -112,14 +113,27 @@ graph LR
 
 ## Installation
 
-### Operator
-
 **Requirements:** Kubernetes 1.28+, Helm 3.x
 
 ```bash
+# Latest version
 helm install rbac-manager oci://ghcr.io/xbrekz1/charts/rbac-manager \
   --namespace rbac-manager \
   --create-namespace \
+  --wait
+
+# Specific version
+helm install rbac-manager oci://ghcr.io/xbrekz1/charts/rbac-manager \
+  --version 1.2.0 \
+  --namespace rbac-manager \
+  --create-namespace \
+  --wait
+```
+
+Upgrade to the latest version:
+```bash
+helm upgrade rbac-manager oci://ghcr.io/xbrekz1/charts/rbac-manager \
+  --namespace rbac-manager \
   --wait
 ```
 
@@ -132,15 +146,6 @@ helm install rbac-manager . --namespace rbac-manager --create-namespace --wait
 ```
 
 </details>
-
-### kubeconfigctl CLI
-
-```bash
-brew install xbrekz1/rbac-manager/kubeconfigctl
-```
-
-Pre-built binaries for Linux and Windows are on the [Releases page](https://github.com/xbrekz1/rbac-manager/releases).
-See [docs/KUBECONFIG_GENERATION.md](docs/KUBECONFIG_GENERATION.md) for full usage.
 
 ---
 
@@ -178,14 +183,27 @@ spec:
 EOF
 ```
 
-### Generate kubeconfig
+### Use a RoleTemplate
+
+Define reusable role rules once — update them and all AccessGrants referencing the template reconcile automatically:
 
 ```bash
-kubeconfigctl generate alice
-# ~/Downloads/kubeconfig-alice.yaml
+kubectl apply -f role-templates/developer-extended.yaml
 ```
 
-See [docs/KUBECONFIG_GENERATION.md](docs/KUBECONFIG_GENERATION.md) for the full guide.
+```yaml
+apiVersion: rbacmanager.io/v1alpha1
+kind: AccessGrant
+metadata:
+  name: alice
+  namespace: rbac-manager
+spec:
+  roleTemplate: developer-extended   # reference by name
+  namespaces: [backend-dev]
+  serviceAccountName: alice-sa
+```
+
+Ready-made templates for all predefined roles are in [`role-templates/`](role-templates/).
 
 ### Revoke access
 
@@ -200,8 +218,11 @@ kubectl delete accessgrant alice -n rbac-manager
 
 ```yaml
 spec:
-  # Predefined role (mutually exclusive with customRules)
+  # Predefined role
   role: developer
+
+  # RoleTemplate — dynamic reusable rules (mutually exclusive with role/customRules)
+  # roleTemplate: my-template
 
   # Custom RBAC rules
   # customRules:

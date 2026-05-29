@@ -67,6 +67,34 @@ func TestAccessGrantValidateCreate(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "valid with roleTemplate",
+			ag: &AccessGrant{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-grant",
+					Namespace: "default",
+				},
+				Spec: AccessGrantSpec{
+					RoleTemplateName: "my-template",
+					Namespaces:       []string{"test-ns"},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "valid with roleTemplate and clusterWide",
+			ag: &AccessGrant{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-grant",
+					Namespace: "default",
+				},
+				Spec: AccessGrantSpec{
+					RoleTemplateName: "my-template",
+					ClusterWide:      true,
+				},
+			},
+			wantErr: false,
+		},
+		{
 			name: "error: both role and customRules",
 			ag: &AccessGrant{
 				ObjectMeta: metav1.ObjectMeta{
@@ -86,10 +114,48 @@ func TestAccessGrantValidateCreate(t *testing.T) {
 				},
 			},
 			wantErr:     true,
-			errContains: "either spec.role or spec.customRules must be specified, but not both",
+			errContains: "only one of spec.role, spec.roleTemplate, or spec.customRules may be specified",
 		},
 		{
-			name: "error: neither role nor customRules",
+			name: "error: roleTemplate and role together",
+			ag: &AccessGrant{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-grant",
+					Namespace: "default",
+				},
+				Spec: AccessGrantSpec{
+					Role:             RoleDeveloper,
+					RoleTemplateName: "my-template",
+					Namespaces:       []string{"test-ns"},
+				},
+			},
+			wantErr:     true,
+			errContains: "only one of spec.role, spec.roleTemplate, or spec.customRules may be specified",
+		},
+		{
+			name: "error: roleTemplate and customRules together",
+			ag: &AccessGrant{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-grant",
+					Namespace: "default",
+				},
+				Spec: AccessGrantSpec{
+					RoleTemplateName: "my-template",
+					CustomRules: []rbacv1.PolicyRule{
+						{
+							APIGroups: []string{""},
+							Resources: []string{"pods"},
+							Verbs:     []string{"get"},
+						},
+					},
+					Namespaces: []string{"test-ns"},
+				},
+			},
+			wantErr:     true,
+			errContains: "only one of spec.role, spec.roleTemplate, or spec.customRules may be specified",
+		},
+		{
+			name: "error: neither role nor customRules nor roleTemplate",
 			ag: &AccessGrant{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-grant",
@@ -100,7 +166,22 @@ func TestAccessGrantValidateCreate(t *testing.T) {
 				},
 			},
 			wantErr:     true,
-			errContains: "either spec.role or spec.customRules must be specified",
+			errContains: "one of spec.role, spec.roleTemplate, or spec.customRules must be specified",
+		},
+		{
+			name: "error: roleTemplate without namespaces when not clusterWide",
+			ag: &AccessGrant{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-grant",
+					Namespace: "default",
+				},
+				Spec: AccessGrantSpec{
+					RoleTemplateName: "my-template",
+					ClusterWide:      false,
+				},
+			},
+			wantErr:     true,
+			errContains: "spec.namespaces must be specified when clusterWide is false",
 		},
 		{
 			name: "error: unknown role",
@@ -339,7 +420,21 @@ func TestAccessGrantValidateUpdate(t *testing.T) {
 				},
 			},
 			wantErr:     true,
-			errContains: "but not both",
+			errContains: "only one of spec.role, spec.roleTemplate, or spec.customRules may be specified",
+		},
+		{
+			name: "valid update: switch from role to roleTemplate",
+			newAG: &AccessGrant{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-grant",
+					Namespace: "default",
+				},
+				Spec: AccessGrantSpec{
+					RoleTemplateName: "my-template",
+					Namespaces:       []string{"test-ns"},
+				},
+			},
+			wantErr: false,
 		},
 	}
 

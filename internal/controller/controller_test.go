@@ -396,6 +396,85 @@ var _ = Describe("AccessGrant Controller", func() {
 		})
 	})
 
+	Context("When creating an AccessGrant with a RoleTemplate", func() {
+		It("Should create Role with rules from the RoleTemplate", func() {
+			ctx := context.Background()
+
+			testNs := &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{Name: "test-namespace-roletemplate"},
+			}
+			Expect(k8sClient.Create(ctx, testNs)).Should(Succeed())
+
+			targetNs := &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{Name: "target-ns-roletemplate"},
+			}
+			Expect(k8sClient.Create(ctx, targetNs)).Should(Succeed())
+
+			rt := &rbacmanagerv1alpha1.RoleTemplate{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "custom-viewer",
+					Namespace: testNs.Name,
+				},
+				Spec: rbacmanagerv1alpha1.RoleTemplateSpec{
+					Rules: []rbacv1.PolicyRule{
+						{
+							APIGroups: []string{""},
+							Resources: []string{"pods"},
+							Verbs:     []string{"get", "list"},
+						},
+					},
+				},
+			}
+			Expect(k8sClient.Create(ctx, rt)).Should(Succeed())
+
+			ag := &rbacmanagerv1alpha1.AccessGrant{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-grant-roletemplate",
+					Namespace: testNs.Name,
+				},
+				Spec: rbacmanagerv1alpha1.AccessGrantSpec{
+					RoleTemplateName:   "custom-viewer",
+					Namespaces:         []string{targetNs.Name},
+					ServiceAccountName: "test-sa-roletemplate",
+				},
+			}
+			Expect(k8sClient.Create(ctx, ag)).Should(Succeed())
+
+			// Role should be created with RoleTemplate's rules
+			roleKey := types.NamespacedName{Name: "rbac-test-grant-roletemplate", Namespace: targetNs.Name}
+			role := &rbacv1.Role{}
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, roleKey, role)
+				return err == nil && len(role.Rules) == 1 && role.Rules[0].Resources[0] == "pods"
+			}, timeout, interval).Should(BeTrue())
+
+			// AccessGrant should become Active
+			agKey := types.NamespacedName{Name: ag.Name, Namespace: ag.Namespace}
+			Eventually(func() rbacmanagerv1alpha1.Phase {
+				_ = k8sClient.Get(ctx, agKey, ag)
+				return ag.Status.Phase
+			}, timeout, interval).Should(Equal(rbacmanagerv1alpha1.PhaseActive))
+
+			// Update RoleTemplate — add a rule
+			rtKey := types.NamespacedName{Name: rt.Name, Namespace: rt.Namespace}
+			Expect(k8sClient.Get(ctx, rtKey, rt)).Should(Succeed())
+			rt.Spec.Rules = append(rt.Spec.Rules, rbacv1.PolicyRule{
+				APIGroups: []string{""},
+				Resources: []string{"pods/log"},
+				Verbs:     []string{"get"},
+			})
+			Expect(k8sClient.Update(ctx, rt)).Should(Succeed())
+
+			// Role should be updated automatically with new rules
+			Eventually(func() int {
+				if err := k8sClient.Get(ctx, roleKey, role); err != nil {
+					return 0
+				}
+				return len(role.Rules)
+			}, timeout, interval).Should(Equal(2))
+		})
+	})
+
 	Context("When AccessGrant has labels and annotations", func() {
 		It("Should propagate labels and annotations to managed resources", func() {
 			ctx := context.Background()
