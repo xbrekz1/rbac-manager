@@ -12,6 +12,13 @@ import (
 
 var accessgrantlog = logf.Log.WithName("accessgrant-resource")
 
+// rbacResources are resources that grant RBAC management capabilities.
+// Blocking these prevents privilege escalation to cluster-admin.
+var rbacResources = map[string]bool{
+	"roles": true, "rolebindings": true,
+	"clusterroles": true, "clusterrolebindings": true,
+}
+
 // SetupWebhookWithManager registers the webhook for AccessGrant in the manager.
 func (r *AccessGrant) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
