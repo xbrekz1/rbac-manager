@@ -124,7 +124,7 @@ helm install rbac-manager oci://ghcr.io/xbrekz1/charts/rbac-manager \
 
 # Specific version
 helm install rbac-manager oci://ghcr.io/xbrekz1/charts/rbac-manager \
-  --version 1.2.0 \
+  --version 1.1.5 \
   --namespace rbac-manager \
   --create-namespace \
   --wait
