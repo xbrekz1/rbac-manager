@@ -9,6 +9,8 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+
+	"github.com/xbrekz1/rbac-manager/internal/roles"
 )
 
 var accessgrantlog = logf.Log.WithName("accessgrant-resource")
@@ -89,12 +91,7 @@ func validateRoleSpec(r *AccessGrant) error {
 		return fmt.Errorf("one of spec.role, spec.roleTemplate, or spec.customRules must be specified")
 	}
 	if r.Spec.Role != "" {
-		validRoles := map[PredefinedRole]bool{
-			RoleReader: true, RoleViewer: true, RoleDeveloper: true,
-			RoleDeveloperExtended: true, RoleDeployer: true, RoleDebugger: true,
-			RoleOperator: true, RoleAuditor: true, RoleMaintainer: true, RoleClusterAdmin: true,
-		}
-		if !validRoles[r.Spec.Role] {
+		if _, ok := roles.GetPredefinedRules(string(r.Spec.Role)); !ok {
 			return fmt.Errorf("unknown predefined role: %q", r.Spec.Role)
 		}
 	}
