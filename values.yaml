@@ -94,9 +94,9 @@ podDisruptionBudget:
 # Requires TLS — use cert-manager (recommended) or provide caBundle manually.
 webhook:
   # Set to true to deploy the ValidatingWebhookConfiguration and webhook Service.
-  # Enabled by default — webhook enforces AccessGrant and RoleTemplate safety checks.
-  # Disable only for development/testing without cert-manager.
-  enabled: true
+  # Requires TLS — enable cert-manager below or provide caBundle manually.
+  # Default false: the operator works without a webhook; validation runs in the controller.
+  enabled: false
   # Seconds before the API server times out a webhook call.
   timeoutSeconds: 10
   # cert-manager integration (recommended for production).
