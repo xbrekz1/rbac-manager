@@ -140,7 +140,7 @@ run: fmt vet ## Run the operator locally
 
 .PHONY: dev
 dev: ## Run in development mode with hot reload (requires air)
-	@which air > /dev/null || (echo "air not found. Install with: go install github.com/cosmtrek/air@latest" && exit 1)
+	@which air > /dev/null || (echo "air not found. Install with: go install github.com/air-verse/air@latest" && exit 1)
 	air
 
 .PHONY: example-create
