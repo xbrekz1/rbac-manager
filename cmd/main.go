@@ -81,6 +81,10 @@ func main() {
 			setupLog.Error(err, "unable to create webhook", "webhook", "AccessGrant")
 			os.Exit(1)
 		}
+		if err := (&rbacmanagerv1alpha1.RoleTemplate{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "RoleTemplate")
+			os.Exit(1)
+		}
 		setupLog.Info("webhook server enabled")
 	}
 

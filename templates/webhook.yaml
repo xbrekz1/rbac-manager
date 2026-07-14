@@ -52,6 +52,27 @@ webhooks:
     failurePolicy: Fail
     sideEffects: None
     timeoutSeconds: {{ .Values.webhook.timeoutSeconds | default 10 }}
+  - name: vroletemplate.kb.io
+    admissionReviewVersions: ["v1"]
+    clientConfig:
+      service:
+        name: {{ include "rbac-manager.fullname" . }}-webhook
+        namespace: {{ .Release.Namespace }}
+        path: /validate-rbacmanager-io-v1alpha1-roletemplate
+      {{- if not .Values.webhook.certManager.enabled }}
+      {{- with .Values.webhook.caBundle }}
+      caBundle: {{ . }}
+      {{- end }}
+      {{- end }}
+    rules:
+      - apiGroups: ["rbacmanager.io"]
+        apiVersions: ["v1alpha1"]
+        operations: ["CREATE", "UPDATE"]
+        resources: ["roletemplates"]
+        scope: "Namespaced"
+    failurePolicy: Fail
+    sideEffects: None
+    timeoutSeconds: {{ .Values.webhook.timeoutSeconds | default 10 }}
 
 {{- if .Values.webhook.certManager.enabled }}
 ---
