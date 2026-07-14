@@ -301,88 +301,53 @@ func (r *AccessGrantReconciler) reconcileNamespaceViewerClusterRole(ctx context.
 }
 
 // cleanupRBAC deletes all RBAC resources managed by the given AccessGrant using label selectors.
-// This function is called when the AccessGrant is deleted (via the finalizer).
-//
-// It uses label selectors to find and delete all resources created by this operator for the
-// given AccessGrant across all namespaces, including:
-//   - ClusterRoleBindings and ClusterRoles (cluster-scoped)
-//   - RoleBindings and Roles in target namespaces
-//   - ServiceAccounts
-//
-// The function attempts to delete all resources even if individual deletes fail,
-// collecting all errors and returning them at the end.
-func (r *AccessGrantReconciler) cleanupRBAC(ctx context.Context, ag *rbacmanagerv1alpha1.AccessGrant) error { //nolint:gocyclo // complexity comes from exhaustive error collection across 5 resource types, not logic
+// It attempts to delete all resources even if individual deletions fail, returning all errors.
+func (r *AccessGrantReconciler) cleanupRBAC(ctx context.Context, ag *rbacmanagerv1alpha1.AccessGrant) error {
 	logger := log.FromContext(ctx)
-
-	labelSelector := client.MatchingLabels{
+	selector := client.MatchingLabels{
 		accessGrantLabel:   ag.Name,
 		accessGrantNsLabel: ag.Namespace,
 		managedByLabel:     managerValue,
 	}
 
-	var errs []error
-
-	// Delete ClusterRoleBindings.
 	crbList := &rbacv1.ClusterRoleBindingList{}
-	if err := r.List(ctx, crbList, labelSelector); err != nil {
-		errs = append(errs, fmt.Errorf("listing ClusterRoleBindings: %w", err))
-	} else {
-		for i := range crbList.Items {
-			logger.Info("Deleting ClusterRoleBinding", "name", crbList.Items[i].Name)
-			if err := r.Delete(ctx, &crbList.Items[i]); client.IgnoreNotFound(err) != nil {
-				errs = append(errs, fmt.Errorf("deleting ClusterRoleBinding %s: %w", crbList.Items[i].Name, err))
-			}
-		}
-	}
-
-	// Delete ClusterRoles.
 	crList := &rbacv1.ClusterRoleList{}
-	if err := r.List(ctx, crList, labelSelector); err != nil {
-		errs = append(errs, fmt.Errorf("listing ClusterRoles: %w", err))
-	} else {
-		for i := range crList.Items {
-			logger.Info("Deleting ClusterRole", "name", crList.Items[i].Name)
-			if err := r.Delete(ctx, &crList.Items[i]); client.IgnoreNotFound(err) != nil {
-				errs = append(errs, fmt.Errorf("deleting ClusterRole %s: %w", crList.Items[i].Name, err))
-			}
-		}
-	}
-
-	// Delete RoleBindings across all namespaces.
 	rbList := &rbacv1.RoleBindingList{}
-	if err := r.List(ctx, rbList, labelSelector); err != nil {
-		errs = append(errs, fmt.Errorf("listing RoleBindings: %w", err))
-	} else {
-		for i := range rbList.Items {
-			logger.Info("Deleting RoleBinding", "name", rbList.Items[i].Name, "namespace", rbList.Items[i].Namespace)
-			if err := r.Delete(ctx, &rbList.Items[i]); client.IgnoreNotFound(err) != nil {
-				errs = append(errs, fmt.Errorf("deleting RoleBinding %s/%s: %w", rbList.Items[i].Namespace, rbList.Items[i].Name, err))
-			}
-		}
-	}
-
-	// Delete Roles across all namespaces.
 	roleList := &rbacv1.RoleList{}
-	if err := r.List(ctx, roleList, labelSelector); err != nil {
-		errs = append(errs, fmt.Errorf("listing Roles: %w", err))
-	} else {
-		for i := range roleList.Items {
-			logger.Info("Deleting Role", "name", roleList.Items[i].Name, "namespace", roleList.Items[i].Namespace)
-			if err := r.Delete(ctx, &roleList.Items[i]); client.IgnoreNotFound(err) != nil {
-				errs = append(errs, fmt.Errorf("deleting Role %s/%s: %w", roleList.Items[i].Namespace, roleList.Items[i].Name, err))
-			}
-		}
+	saList := &corev1.ServiceAccountList{}
+
+	type step struct {
+		kind string
+		list client.ObjectList
+		objs func() []client.Object
+	}
+	steps := []step{
+		{"ClusterRoleBinding", crbList, func() []client.Object { return asObjects[rbacv1.ClusterRoleBinding, *rbacv1.ClusterRoleBinding](crbList.Items) }},
+		{"ClusterRole", crList, func() []client.Object { return asObjects[rbacv1.ClusterRole, *rbacv1.ClusterRole](crList.Items) }},
+		{"RoleBinding", rbList, func() []client.Object { return asObjects[rbacv1.RoleBinding, *rbacv1.RoleBinding](rbList.Items) }},
+		{"Role", roleList, func() []client.Object { return asObjects[rbacv1.Role, *rbacv1.Role](roleList.Items) }},
+		{"ServiceAccount", saList, func() []client.Object { return asObjects[corev1.ServiceAccount, *corev1.ServiceAccount](saList.Items) }},
 	}
 
-	// Delete ServiceAccounts.
-	saList := &corev1.ServiceAccountList{}
-	if err := r.List(ctx, saList, labelSelector); err != nil {
-		errs = append(errs, fmt.Errorf("listing ServiceAccounts: %w", err))
-	} else {
-		for i := range saList.Items {
-			logger.Info("Deleting ServiceAccount", "name", saList.Items[i].Name, "namespace", saList.Items[i].Namespace)
-			if err := r.Delete(ctx, &saList.Items[i]); client.IgnoreNotFound(err) != nil {
-				errs = append(errs, fmt.Errorf("deleting ServiceAccount %s/%s: %w", saList.Items[i].Namespace, saList.Items[i].Name, err))
+	var errs []error
+	for _, s := range steps {
+		if err := r.List(ctx, s.list, selector); err != nil {
+			errs = append(errs, fmt.Errorf("listing %s: %w", s.kind, err))
+			continue
+		}
+		for _, obj := range s.objs() {
+			ns, name := obj.GetNamespace(), obj.GetName()
+			if ns != "" {
+				logger.Info("Deleting "+s.kind, "name", name, "namespace", ns)
+			} else {
+				logger.Info("Deleting "+s.kind, "name", name)
+			}
+			if err := r.Delete(ctx, obj); client.IgnoreNotFound(err) != nil {
+				id := name
+				if ns != "" {
+					id = ns + "/" + name
+				}
+				errs = append(errs, fmt.Errorf("deleting %s %s: %w", s.kind, id, err))
 			}
 		}
 	}
@@ -391,4 +356,17 @@ func (r *AccessGrantReconciler) cleanupRBAC(ctx context.Context, ag *rbacmanager
 		return fmt.Errorf("cleanup encountered %d error(s): %w", len(errs), errors.Join(errs...))
 	}
 	return nil
+}
+
+// asObjects converts a typed slice into []client.Object by taking the address of each element.
+// P must be *T and implement client.Object.
+func asObjects[T any, P interface {
+	*T
+	client.Object
+}](items []T) []client.Object {
+	objs := make([]client.Object, len(items))
+	for i := range items {
+		objs[i] = P(&items[i])
+	}
+	return objs
 }
