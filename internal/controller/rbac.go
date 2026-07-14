@@ -2,11 +2,12 @@ package controller
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -88,7 +89,7 @@ func (r *AccessGrantReconciler) reconcileRBAC(ctx context.Context, ag *rbacmanag
 		// Verify the namespace exists.
 		nsObj := &corev1.Namespace{}
 		if err := r.Get(ctx, types.NamespacedName{Name: ns}, nsObj); err != nil {
-			if errors.IsNotFound(err) {
+			if apierrors.IsNotFound(err) {
 				logger.Info("Target namespace does not exist, skipping — will retry on next reconcile", "namespace", ns)
 				skippedNamespaces = append(skippedNamespaces, ns)
 				continue
@@ -387,7 +388,7 @@ func (r *AccessGrantReconciler) cleanupRBAC(ctx context.Context, ag *rbacmanager
 	}
 
 	if len(errs) > 0 {
-		return fmt.Errorf("cleanup encountered %d error(s): %w", len(errs), errs[0])
+		return fmt.Errorf("cleanup encountered %d error(s): %w", len(errs), errors.Join(errs...))
 	}
 	return nil
 }
