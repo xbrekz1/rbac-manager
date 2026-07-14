@@ -337,6 +337,37 @@ func TestAccessGrantValidateCreate(t *testing.T) {
 			},
 			wantErr: false,
 		},
+		{
+			name: "error: serviceAccountName is reserved 'default'",
+			ag: &AccessGrant{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-grant",
+					Namespace: "default",
+				},
+				Spec: AccessGrantSpec{
+					Role:               RoleDeveloper,
+					Namespaces:         []string{"test-ns"},
+					ServiceAccountName: "default",
+				},
+			},
+			wantErr:     true,
+			errContains: "is reserved and cannot be used",
+		},
+		{
+			name: "valid: custom serviceAccountName that is not reserved",
+			ag: &AccessGrant{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-grant",
+					Namespace: "default",
+				},
+				Spec: AccessGrantSpec{
+					Role:               RoleDeveloper,
+					Namespaces:         []string{"test-ns"},
+					ServiceAccountName: "my-custom-sa",
+				},
+			},
+			wantErr: false,
+		},
 	}
 
 	for _, tt := range tests {

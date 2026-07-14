@@ -127,9 +127,18 @@ func validateNamespacingSpec(r *AccessGrant) (admission.Warnings, error) {
 	return warnings, nil
 }
 
+// reservedServiceAccountNames are Kubernetes built-in service accounts that
+// must not be overwritten by the operator.
+var reservedServiceAccountNames = map[string]bool{
+	"default": true,
+}
+
 func validateNames(r *AccessGrant) error {
 	if len(r.Spec.ServiceAccountName) > 253 {
 		return fmt.Errorf("spec.serviceAccountName is too long (max 253 characters)")
+	}
+	if r.Spec.ServiceAccountName != "" && reservedServiceAccountNames[r.Spec.ServiceAccountName] {
+		return fmt.Errorf("spec.serviceAccountName %q is reserved and cannot be used", r.Spec.ServiceAccountName)
 	}
 	const maxK8sName = 253
 	if len("rbac-"+r.Name)+len("-namespace-viewer") > maxK8sName {
