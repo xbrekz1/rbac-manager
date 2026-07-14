@@ -170,20 +170,27 @@ setup-envtest: ## Setup envtest binaries
 	setup-envtest use
 
 
+GOLANGCI_LINT_VERSION  ?= v1.64.8
+CONTROLLER_GEN_VERSION ?= v0.17.3
+SETUP_ENVTEST_VERSION  ?= v0.19.3
+GINKGO_VERSION         ?= v2.19.0
+
 .PHONY: install-tools
-install-tools: ## Install development tools
+install-tools: ## Install development tools (versions pinned above)
 	@echo "Installing development tools..."
-	@echo "Installing golangci-lint..."
-	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
-	@echo "Installing controller-gen..."
-	@go install sigs.k8s.io/controller-tools/cmd/controller-gen@latest
-	@echo "Installing setup-envtest..."
-	@go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
-	@echo "Installing ginkgo..."
-	@go install github.com/onsi/ginkgo/v2/ginkgo@latest
-	@echo "Installing spf13/cobra..."
+	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
+	@go install sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_GEN_VERSION)
+	@go install sigs.k8s.io/controller-runtime/tools/setup-envtest@$(SETUP_ENVTEST_VERSION)
+	@go install github.com/onsi/ginkgo/v2/ginkgo@$(GINKGO_VERSION)
 	@go install github.com/spf13/cobra-cli@latest
 	@echo "All tools installed!"
+
+.PHONY: update-deps
+update-deps: ## Update all Go dependencies to latest minor/patch versions
+	@echo "Updating dependencies..."
+	$(GOCMD) get -u ./...
+	$(GOCMD) mod tidy
+	@echo "Done. Review go.mod and run 'make test' before committing."
 
 .PHONY: pre-commit
 pre-commit: fmt vet lint test ## Run pre-commit checks

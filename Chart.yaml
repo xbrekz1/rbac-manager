@@ -4,6 +4,7 @@ description: Production-grade RBAC Manager Operator for Kubernetes. Simplify acc
 type: application
 version: 1.1.6
 appVersion: "v1.1.6"
+kubeVersion: ">=1.28.0-0"
 keywords:
   - rbac
   - access-control

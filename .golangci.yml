@@ -86,15 +86,6 @@ issues:
       linters:
         - revive
 
-    # kubeconfigctl is a CLI binary — fmt.Print* errors are intentionally ignored,
-    # subprocess calls to kubectl are by design, exported types in main are fine
-    - path: cmd/kubeconfigctl/
-      linters:
-        - errcheck
-        - gosec
-        - revive
-        - unparam
-
   # Maximum issues count per one linter. Set to 0 to disable
   max-issues-per-linter: 0
 

@@ -26,7 +26,7 @@ jobs:
         run: go test -v -race -short -coverprofile=coverage.txt -covermode=atomic ./...
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v5
         with:
           files: ./coverage.txt
           flags: unittests
@@ -44,11 +44,11 @@ jobs:
           go-version-file: go.mod
           cache: true
 
-      - name: Install golangci-lint
-        run: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b /usr/local/bin v1.62.0
-
       - name: Run golangci-lint
-        run: golangci-lint run --timeout=5m
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v1.64.8
+          args: --timeout=5m
 
   build:
     name: Build & Vet
@@ -76,6 +76,11 @@ jobs:
 
       - name: Set up Helm
         uses: azure/setup-helm@v4
+        with:
+          version: v3.17.3
 
-      - name: Lint chart
+      - name: Lint (webhook disabled)
         run: helm lint . --strict --set webhook.enabled=false
+
+      - name: Lint (webhook + cert-manager)
+        run: helm lint . --strict --set webhook.enabled=true --set webhook.certManager.enabled=true
