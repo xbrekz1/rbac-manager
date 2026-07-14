@@ -1,0 +1,133 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 740 210" width="740" height="210">
+  <defs>
+    <linearGradient id="opGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e40af"/>
+      <stop offset="100%" stop-color="#2563eb"/>
+    </linearGradient>
+    <filter id="soft" x="-10%" y="-15%" width="130%" height="145%">
+      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#93c5fd" flood-opacity="0.18"/>
+    </filter>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5"
+            markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#2563eb"/>
+    </marker>
+    <marker id="arrD" viewBox="0 0 10 10" refX="9" refY="5"
+            markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#93c5fd"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="740" height="210" rx="14" fill="#f0f6ff"/>
+  <rect width="740" height="210" rx="14" fill="none" stroke="#c7d9f5" stroke-width="1"/>
+
+  <!-- ─── USER ─────────────────────────────────────────── -->
+  <rect x="14" y="87" width="100" height="36" rx="18"
+        fill="white" stroke="#c7d9f5" stroke-width="1.5" filter="url(#soft)"/>
+  <text x="64" y="110" text-anchor="middle"
+        font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif"
+        font-size="12.5" fill="#0f172a">👤 User / CI</text>
+
+  <!-- ─── ACCESSGRANT ──────────────────────────────────── -->
+  <rect x="152" y="45" width="172" height="120" rx="10"
+        fill="white" stroke="#c7d9f5" stroke-width="1.5" filter="url(#soft)"/>
+  <!-- header -->
+  <rect x="152" y="45" width="172" height="29" rx="10" fill="#eff6ff"/>
+  <rect x="152" y="59"  width="172" height="15" fill="#eff6ff"/>
+  <text x="238" y="64" text-anchor="middle"
+        font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif"
+        font-size="11" font-weight="600" fill="#1d4ed8">AccessGrant</text>
+  <line x1="152" y1="74" x2="324" y2="74" stroke="#dde9ff" stroke-width="1"/>
+  <!-- code content -->
+  <text x="166" y="91"
+        font-family="ui-monospace,SFMono-Regular,Menlo,monospace"
+        font-size="10.5" fill="#475569">role: <tspan fill="#1d4ed8" font-weight="500">developer</tspan></text>
+  <text x="166" y="107"
+        font-family="ui-monospace,SFMono-Regular,Menlo,monospace"
+        font-size="10.5" fill="#475569">namespaces:</text>
+  <text x="176" y="121"
+        font-family="ui-monospace,SFMono-Regular,Menlo,monospace"
+        font-size="10.5" fill="#475569">- <tspan fill="#0ea5e9">backend</tspan></text>
+  <text x="176" y="135"
+        font-family="ui-monospace,SFMono-Regular,Menlo,monospace"
+        font-size="10.5" fill="#475569">- <tspan fill="#0ea5e9">staging</tspan></text>
+  <text x="166" y="152"
+        font-family="ui-monospace,SFMono-Regular,Menlo,monospace"
+        font-size="10.5" fill="#475569">serviceAccount: <tspan fill="#0ea5e9">alice-sa</tspan></text>
+
+  <!-- ─── OPERATOR ─────────────────────────────────────── -->
+  <rect x="374" y="77" width="136" height="56" rx="10"
+        fill="url(#opGrad)" filter="url(#soft)"/>
+  <rect x="374" y="77" width="136" height="56" rx="10"
+        fill="none" stroke="#93c5fd" stroke-width="0.5" opacity="0.5"/>
+  <text x="442" y="101" text-anchor="middle"
+        font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif"
+        font-size="12" font-weight="600" fill="white">⚙️ rbac-manager</text>
+  <text x="442" y="119" text-anchor="middle"
+        font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif"
+        font-size="10" fill="#bfdbfe" letter-spacing="1">OPERATOR</text>
+
+  <!-- ─── OUTPUT BOXES ─────────────────────────────────── -->
+
+  <!-- ServiceAccount -->
+  <rect x="572" y="37" width="154" height="42" rx="8"
+        fill="white" stroke="#c7d9f5" stroke-width="1.5" filter="url(#soft)"/>
+  <rect x="572" y="37" width="4" height="42" rx="2" fill="#2563eb"/>
+  <text x="590" y="53"
+        font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif"
+        font-size="11" font-weight="600" fill="#0f172a">ServiceAccount</text>
+  <text x="590" y="68"
+        font-family="ui-monospace,SFMono-Regular,Menlo,monospace"
+        font-size="10" fill="#2563eb">alice-sa</text>
+
+  <!-- backend -->
+  <rect x="572" y="89" width="154" height="42" rx="8"
+        fill="white" stroke="#c7d9f5" stroke-width="1.5" filter="url(#soft)"/>
+  <rect x="572" y="89" width="4" height="42" rx="2" fill="#0ea5e9"/>
+  <text x="590" y="105"
+        font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif"
+        font-size="11" font-weight="600" fill="#0f172a">backend</text>
+  <text x="590" y="120"
+        font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif"
+        font-size="10" fill="#64748b">Role · RoleBinding</text>
+
+  <!-- staging -->
+  <rect x="572" y="141" width="154" height="42" rx="8"
+        fill="white" stroke="#c7d9f5" stroke-width="1.5" filter="url(#soft)"/>
+  <rect x="572" y="141" width="4" height="42" rx="2" fill="#0ea5e9"/>
+  <text x="590" y="157"
+        font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif"
+        font-size="11" font-weight="600" fill="#0f172a">staging</text>
+  <text x="590" y="172"
+        font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif"
+        font-size="10" fill="#64748b">Role · RoleBinding</text>
+
+  <!-- ─── ARROWS ───────────────────────────────────────── -->
+
+  <!-- User → AccessGrant -->
+  <line x1="116" y1="105" x2="150" y2="105"
+        stroke="#2563eb" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="133" y="98" text-anchor="middle"
+        font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif"
+        font-size="9" fill="#64748b">kubectl apply</text>
+
+  <!-- AccessGrant → Operator (dashed = watch) -->
+  <line x1="326" y1="105" x2="372" y2="105"
+        stroke="#93c5fd" stroke-width="1.5" stroke-dasharray="4,3"
+        marker-end="url(#arrD)"/>
+  <text x="349" y="98" text-anchor="middle"
+        font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif"
+        font-size="9" fill="#64748b">watch event</text>
+
+  <!-- Operator → ServiceAccount -->
+  <path d="M 512,94 C 545,94 545,58 570,58"
+        stroke="#2563eb" stroke-width="1.5" fill="none" marker-end="url(#arr)"/>
+
+  <!-- Operator → backend -->
+  <line x1="512" y1="105" x2="570" y2="110"
+        stroke="#2563eb" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- Operator → staging -->
+  <path d="M 512,116 C 545,116 545,162 570,162"
+        stroke="#2563eb" stroke-width="1.5" fill="none" marker-end="url(#arr)"/>
+</svg>

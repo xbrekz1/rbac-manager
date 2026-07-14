@@ -1,38 +1,67 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 120" width="520" height="120">
-  <!-- Background -->
-  <rect width="520" height="120" rx="12" fill="#0d1117"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 464 130" width="464" height="130">
+  <defs>
+    <linearGradient id="shieldGrad" x1="20%" y1="0%" x2="80%" y2="100%">
+      <stop offset="0%" stop-color="#1e40af"/>
+      <stop offset="100%" stop-color="#2563eb"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="7" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="cardShadow" x="-3%" y="-6%" width="108%" height="120%">
+      <feDropShadow dx="0" dy="2" stdDeviation="5" flood-color="#93c5fd" flood-opacity="0.25"/>
+    </filter>
+  </defs>
 
-  <!-- Shield -->
-  <path d="M30,22 L90,22 L90,64 Q90,94 60,98 Q30,94 30,64 Z"
-        fill="none" stroke="#30363d" stroke-width="1.5"/>
-  <path d="M37,28 L83,28 L83,62 Q83,87 60,92 Q37,87 37,62 Z"
-        fill="#1c2128"/>
+  <!-- Card — sized to content with equal 19px margins -->
+  <rect width="464" height="130" rx="14" fill="#f0f6ff" filter="url(#cardShadow)"/>
+  <rect width="464" height="130" rx="14" fill="#f0f6ff"/>
+  <rect width="464" height="130" rx="14" fill="none" stroke="#c7d9f5" stroke-width="1"/>
 
-  <!-- Lock shackle -->
-  <path d="M50,60 L50,51 Q50,42 60,42 Q70,42 70,51 L70,60"
-        fill="none" stroke="#388bfd" stroke-width="3" stroke-linecap="round"/>
+  <!-- Shield glow — center x=68 -->
+  <path d="M68 9 L117 34 L117 80 Q117 109 68 123 Q19 109 19 80 L19 34 Z"
+        fill="#3b82f6" opacity="0.2" filter="url(#glow)"/>
+
+  <!-- Shield body -->
+  <path d="M68 9 L117 34 L117 80 Q117 109 68 123 Q19 109 19 80 L19 34 Z"
+        fill="url(#shieldGrad)"/>
+
+  <!-- Shield top highlight -->
+  <path d="M68 13 L113 36 L113 57 Q93 49 68 47 Q43 49 23 57 L23 36 Z"
+        fill="white" opacity="0.12"/>
+
+  <!-- Shield border -->
+  <path d="M68 9 L117 34 L117 80 Q117 109 68 123 Q19 109 19 80 L19 34 Z"
+        fill="none" stroke="#93c5fd" stroke-width="1" opacity="0.5"/>
+
+  <!-- Lock shackle — centered at x=68 -->
+  <path d="M57,76 L57,63 Q57,51 68,51 Q79,51 79,63 L79,76"
+        fill="none" stroke="white" stroke-width="2.8" stroke-linecap="round"/>
 
   <!-- Lock body -->
-  <rect x="46" y="58" width="28" height="22" rx="4" fill="#388bfd"/>
+  <rect x="53" y="74" width="30" height="24" rx="5" fill="white"/>
+  <rect x="53" y="74" width="30" height="24" rx="5"
+        fill="none" stroke="#bfdbfe" stroke-width="0.5"/>
 
   <!-- Keyhole -->
-  <circle cx="60" cy="68" r="4.5" fill="#0d1117"/>
-  <rect x="57.5" y="68" width="5" height="8" rx="2" fill="#0d1117"/>
+  <circle cx="68" cy="84" r="4" fill="#1d4ed8"/>
+  <rect x="65.5" y="84" width="5" height="8" rx="1.5" fill="#1d4ed8"/>
 
-  <!-- Text -->
-  <text x="114" y="70"
-        font-family="ui-monospace, SFMono-Regular, Menlo, monospace"
-        font-size="38" font-weight="700"
-        fill="#e6edf3">rbac</text>
-  <text x="209" y="70"
-        font-family="ui-monospace, SFMono-Regular, Menlo, monospace"
-        font-size="38" font-weight="300"
-        fill="#388bfd">-manager</text>
+  <!-- Divider — 20px gap after shield right edge (117+20=137) -->
+  <line x1="137" y1="24" x2="137" y2="106" stroke="#c7d9f5" stroke-width="1"/>
+
+  <!-- rbac-manager — starts at x=153 (16px after divider) -->
+  <text x="153" y="76"
+        font-family="ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace"
+        font-size="40">
+    <tspan font-weight="700" fill="#0f172a">rbac</tspan><tspan font-weight="300" fill="#2563eb">-manager</tspan>
+  </text>
 
   <!-- Subtitle -->
-  <text x="115" y="94"
-        font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
-        font-size="12" fill="#6e7681" letter-spacing="2">
-    KUBERNETES RBAC OPERATOR
-  </text>
+  <text x="154" y="102"
+        font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif"
+        font-size="10.5" fill="#93afd4" letter-spacing="3.5" font-weight="500">KUBERNETES RBAC OPERATOR</text>
 </svg>
