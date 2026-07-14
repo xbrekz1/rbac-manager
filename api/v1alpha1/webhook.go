@@ -109,41 +109,49 @@ func validateCustomRules(r *AccessGrant) error {
 // Shared by AccessGrant customRules and RoleTemplate rules.
 func validatePolicyRules(rules []rbacv1.PolicyRule, pathPrefix string) error {
 	for i, rule := range rules {
-		if len(rule.Verbs) == 0 {
-			return fmt.Errorf("%s[%d]: verbs must be specified", pathPrefix, i)
-		}
-		if len(rule.Resources) == 0 && len(rule.NonResourceURLs) == 0 {
-			return fmt.Errorf("%s[%d]: either resources or nonResourceURLs must be specified", pathPrefix, i)
-		}
-		isAllWildcard := len(rule.Verbs) == 1 && rule.Verbs[0] == "*" &&
-			len(rule.Resources) == 1 && rule.Resources[0] == "*" &&
-			len(rule.APIGroups) == 1 && rule.APIGroups[0] == "*"
-		if isAllWildcard {
-			return fmt.Errorf("%s[%d]: wildcard apiGroups/resources/verbs is not allowed; use predefined role 'cluster-admin' instead", pathPrefix, i)
-		}
-		for _, grp := range rule.APIGroups {
-			if grp != "rbac.authorization.k8s.io" && grp != "*" {
-				continue
-			}
-			for _, res := range rule.Resources {
-				if res == "*" || rbacResources[res] {
-					return fmt.Errorf("%s[%d]: RBAC resources (%s) are not allowed; use predefined roles instead", pathPrefix, i, res)
-				}
-			}
-		}
-		// Reject rules that grant access to RBAC resources (privilege escalation).
-		for _, grp := range rule.APIGroups {
-			if grp != "rbac.authorization.k8s.io" && grp != "*" {
-				continue
-			}
-			for _, res := range rule.Resources {
-				if res == "*" || rbacResources[res] {
-					return fmt.Errorf("customRules[%d]: RBAC resources (%s) are not allowed in customRules; use predefined roles instead", i, res)
-				}
-			}
+		if err := validateSingleRule(rule, pathPrefix, i); err != nil {
+			return err
 		}
 	}
 	return nil
+}
+
+func validateSingleRule(rule rbacv1.PolicyRule, pathPrefix string, i int) error {
+	if len(rule.Verbs) == 0 {
+		return fmt.Errorf("%s[%d]: verbs must be specified", pathPrefix, i)
+	}
+	if len(rule.Resources) == 0 && len(rule.NonResourceURLs) == 0 {
+		return fmt.Errorf("%s[%d]: either resources or nonResourceURLs must be specified", pathPrefix, i)
+	}
+	if isFullWildcard(rule) {
+		return fmt.Errorf("%s[%d]: wildcard apiGroups/resources/verbs is not allowed; use predefined role 'cluster-admin' instead", pathPrefix, i)
+	}
+	if res := rbacResourceConflict(rule); res != "" {
+		return fmt.Errorf("%s[%d]: RBAC resources (%s) are not allowed; use predefined roles instead", pathPrefix, i, res)
+	}
+	return nil
+}
+
+func isFullWildcard(rule rbacv1.PolicyRule) bool {
+	return len(rule.Verbs) == 1 && rule.Verbs[0] == "*" &&
+		len(rule.Resources) == 1 && rule.Resources[0] == "*" &&
+		len(rule.APIGroups) == 1 && rule.APIGroups[0] == "*"
+}
+
+// rbacResourceConflict returns the first resource name that would grant RBAC
+// management access, or an empty string if the rule is safe.
+func rbacResourceConflict(rule rbacv1.PolicyRule) string {
+	for _, grp := range rule.APIGroups {
+		if grp != "rbac.authorization.k8s.io" && grp != "*" {
+			continue
+		}
+		for _, res := range rule.Resources {
+			if res == "*" || rbacResources[res] {
+				return res
+			}
+		}
+	}
+	return ""
 }
 
 func validateNamespacingSpec(r *AccessGrant) (admission.Warnings, error) {
