@@ -14,7 +14,7 @@ import (
 var accessgrantlog = logf.Log.WithName("accessgrant-resource")
 
 // rbacResources are resources that grant RBAC management capabilities.
-// Blocking these prevents privilege escalation to cluster-admin.
+// Blocking these in customRules prevents privilege escalation to cluster-admin.
 var rbacResources = map[string]bool{
 	"roles": true, "rolebindings": true,
 	"clusterroles": true, "clusterrolebindings": true,
@@ -128,6 +128,17 @@ func validatePolicyRules(rules []rbacv1.PolicyRule, pathPrefix string) error {
 			for _, res := range rule.Resources {
 				if res == "*" || rbacResources[res] {
 					return fmt.Errorf("%s[%d]: RBAC resources (%s) are not allowed; use predefined roles instead", pathPrefix, i, res)
+				}
+			}
+		}
+		// Reject rules that grant access to RBAC resources (privilege escalation).
+		for _, grp := range rule.APIGroups {
+			if grp != "rbac.authorization.k8s.io" && grp != "*" {
+				continue
+			}
+			for _, res := range rule.Resources {
+				if res == "*" || rbacResources[res] {
+					return fmt.Errorf("customRules[%d]: RBAC resources (%s) are not allowed in customRules; use predefined roles instead", i, res)
 				}
 			}
 		}

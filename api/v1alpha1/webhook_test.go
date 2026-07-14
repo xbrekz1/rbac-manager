@@ -338,32 +338,105 @@ func TestAccessGrantValidateCreate(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "error: serviceAccountName is reserved 'default'",
+			name: "error: customRules with wildcard combination",
 			ag: &AccessGrant{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-grant",
 					Namespace: "default",
 				},
 				Spec: AccessGrantSpec{
-					Role:               RoleDeveloper,
-					Namespaces:         []string{"test-ns"},
-					ServiceAccountName: "default",
+					CustomRules: []rbacv1.PolicyRule{
+						{
+							APIGroups: []string{"*"},
+							Resources: []string{"*"},
+							Verbs:     []string{"*"},
+						},
+					},
+					Namespaces: []string{"test-ns"},
 				},
 			},
 			wantErr:     true,
-			errContains: "is reserved and cannot be used",
+			errContains: "wildcard apiGroups/resources/verbs is not allowed",
 		},
 		{
-			name: "valid: custom serviceAccountName that is not reserved",
+			name: "error: customRules granting clusterroles",
 			ag: &AccessGrant{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-grant",
 					Namespace: "default",
 				},
 				Spec: AccessGrantSpec{
-					Role:               RoleDeveloper,
-					Namespaces:         []string{"test-ns"},
-					ServiceAccountName: "my-custom-sa",
+					CustomRules: []rbacv1.PolicyRule{
+						{
+							APIGroups: []string{"rbac.authorization.k8s.io"},
+							Resources: []string{"clusterroles"},
+							Verbs:     []string{"get", "list"},
+						},
+					},
+					Namespaces: []string{"test-ns"},
+				},
+			},
+			wantErr:     true,
+			errContains: "RBAC resources",
+		},
+		{
+			name: "error: customRules granting rolebindings with wildcard apiGroup",
+			ag: &AccessGrant{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-grant",
+					Namespace: "default",
+				},
+				Spec: AccessGrantSpec{
+					CustomRules: []rbacv1.PolicyRule{
+						{
+							APIGroups: []string{"*"},
+							Resources: []string{"rolebindings"},
+							Verbs:     []string{"*"},
+						},
+					},
+					Namespaces: []string{"test-ns"},
+				},
+			},
+			wantErr:     true,
+			errContains: "RBAC resources",
+		},
+		{
+			name: "error: customRules granting wildcard resources in RBAC apiGroup",
+			ag: &AccessGrant{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-grant",
+					Namespace: "default",
+				},
+				Spec: AccessGrantSpec{
+					CustomRules: []rbacv1.PolicyRule{
+						{
+							APIGroups: []string{"rbac.authorization.k8s.io"},
+							Resources: []string{"*"},
+							Verbs:     []string{"get"},
+						},
+					},
+					Namespaces: []string{"test-ns"},
+				},
+			},
+			wantErr:     true,
+			errContains: "RBAC resources",
+		},
+		{
+			name: "valid: customRules with non-RBAC resources in core group",
+			ag: &AccessGrant{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-grant",
+					Namespace: "default",
+				},
+				Spec: AccessGrantSpec{
+					CustomRules: []rbacv1.PolicyRule{
+						{
+							APIGroups: []string{""},
+							Resources: []string{"pods", "configmaps"},
+							Verbs:     []string{"get", "list"},
+						},
+					},
+					Namespaces: []string{"test-ns"},
 				},
 			},
 			wantErr: false,
