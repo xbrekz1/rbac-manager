@@ -1,0 +1,79 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: roletemplates.rbacmanager.io
+  labels:
+    app.kubernetes.io/name: rbac-manager
+    app.kubernetes.io/part-of: rbac-manager
+spec:
+  group: rbacmanager.io
+  names:
+    kind: RoleTemplate
+    listKind: RoleTemplateList
+    plural: roletemplates
+    singular: roletemplate
+    shortNames:
+      - rt
+  scope: Namespaced
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          required:
+            - spec
+          properties:
+            apiVersion:
+              type: string
+            kind:
+              type: string
+            metadata:
+              type: object
+            spec:
+              type: object
+              required:
+                - rules
+              properties:
+                rules:
+                  type: array
+                  description: RBAC policy rules for this template. At least one rule is required.
+                  minItems: 1
+                  items:
+                    type: object
+                    required:
+                      - verbs
+                    properties:
+                      apiGroups:
+                        type: array
+                        items:
+                          type: string
+                      resources:
+                        type: array
+                        items:
+                          type: string
+                      resourceNames:
+                        type: array
+                        items:
+                          type: string
+                      nonResourceURLs:
+                        type: array
+                        items:
+                          type: string
+                      verbs:
+                        type: array
+                        minItems: 1
+                        items:
+                          type: string
+                needsNamespaceViewer:
+                  type: boolean
+                  default: false
+                  description: >
+                    Grant get/list/watch on namespaces cluster-wide.
+                    Enable for roles that need namespace listing in tools like OpenLens.
+      additionalPrinterColumns:
+        - name: Age
+          type: date
+          jsonPath: .metadata.creationTimestamp
+          priority: 0

@@ -59,6 +59,9 @@ spec:
                     - auditor
                     - maintainer
                     - cluster-admin
+                roleTemplate:
+                  type: string
+                  description: Name of a RoleTemplate resource in the same namespace. Mutually exclusive with role and customRules.
                 customRules:
                   type: array
                   description: Custom RBAC rules (used when role is not specified)
@@ -175,6 +178,10 @@ spec:
         - name: ClusterWide
           type: boolean
           jsonPath: .spec.clusterWide
+          priority: 1
+        - name: Template
+          type: string
+          jsonPath: .spec.roleTemplate
           priority: 1
         - name: Phase
           type: string
