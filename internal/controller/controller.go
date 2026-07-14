@@ -193,7 +193,7 @@ func (r *AccessGrantReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	}
 
 	r.Recorder.Event(ag, corev1.EventTypeNormal, ReasonReconciliationSucceeded,
-		fmt.Sprintf("Successfully reconciled RBAC for role %q in %d namespace(s)", ag.Spec.Role, len(result.namespaces)))
+		fmt.Sprintf("Successfully reconciled RBAC (%s) in %d namespace(s)", rbacSource(ag), len(result.namespaces)))
 
 	logger.Info("Successfully reconciled AccessGrant",
 		"name", ag.Name,
@@ -290,4 +290,17 @@ func (r *AccessGrantReconciler) findAccessGrantsForNamespace(ctx context.Context
 	}
 
 	return requests
+}
+
+// rbacSource returns a short human-readable description of what defines the
+// access rules for an AccessGrant — used in Kubernetes Events.
+func rbacSource(ag *rbacmanagerv1alpha1.AccessGrant) string {
+	switch {
+	case ag.Spec.Role != "":
+		return "role=" + string(ag.Spec.Role)
+	case ag.Spec.RoleTemplateName != "":
+		return "template=" + ag.Spec.RoleTemplateName
+	default:
+		return "customRules"
+	}
 }
