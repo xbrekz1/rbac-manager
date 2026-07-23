@@ -31,6 +31,13 @@ rules:
     resources: ["accessgrants/finalizers"]
     verbs: ["update"]
 
+  # RoleTemplate CRD — read-only, referenced by AccessGrant.spec.roleTemplate.
+  # list/watch are required for the controller's Watches(&RoleTemplate{}, ...)
+  # informer that triggers AccessGrant reconciles when a template changes.
+  - apiGroups: ["rbacmanager.io"]
+    resources: ["roletemplates"]
+    verbs: ["get", "list", "watch"]
+
   # ServiceAccount management — operator creates SAs for AccessGrants
   - apiGroups: [""]
     resources: ["serviceaccounts"]
