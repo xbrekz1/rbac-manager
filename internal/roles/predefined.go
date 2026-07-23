@@ -25,9 +25,9 @@ import (
 // the permissions necessary for its intended use case.
 var predefinedRoles = map[string][]rbacv1.PolicyRule{
 
-	// reader — минимальный доступ на чтение.
-	// Может видеть workload-ресурсы, но НЕ логи, НЕ exec, НЕ secrets.
-	// Подходит для: product managers, stakeholders, внешних аудиторов.
+	// reader — minimal read-only access.
+	// Can see workload resources, but NOT logs, NOT exec, NOT secrets.
+	// Use case: product managers, stakeholders, external auditors.
 	"reader": {
 		{
 			APIGroups: []string{""},
@@ -51,8 +51,8 @@ var predefinedRoles = map[string][]rbacv1.PolicyRule{
 		},
 	},
 
-	// viewer — просмотр подов и логов.
-	// Подходит для: мониторинг-команды, on-call без права вмешиваться.
+	// viewer — view pods and logs.
+	// Use case: monitoring teams, on-call without intervention rights.
 	"viewer": {
 		{
 			APIGroups: []string{""},
@@ -81,9 +81,9 @@ var predefinedRoles = map[string][]rbacv1.PolicyRule{
 		},
 	},
 
-	// developer — отладка приложений в namespace.
-	// viewer + exec в поды + чтение secrets.
-	// Подходит для: разработчики, QA-инженеры.
+	// developer — debug applications within a namespace.
+	// viewer + pod exec + read secrets.
+	// Use case: developers, QA engineers.
 	"developer": {
 		{
 			APIGroups: []string{""},
@@ -117,11 +117,11 @@ var predefinedRoles = map[string][]rbacv1.PolicyRule{
 		},
 	},
 
-	// developer-extended — расширенный доступ разработчика.
-	// То же что developer, но дополнительно получает ClusterRole на просмотр
-	// namespace-ов — это необходимо для корректной навигации в OpenLens
-	// (без этого список неймспейсов в левом меню пустой).
-	// Также может рестартовать deployments через kubectl rollout restart.
+	// developer-extended — extended developer access.
+	// Same as developer, but additionally receives a ClusterRole granting
+	// namespace listing — required for OpenLens sidebar navigation
+	// (without it, the namespace list in the left panel is empty).
+	// Can also restart deployments via kubectl rollout restart.
 	"developer-extended": {
 		{
 			APIGroups: []string{""},
@@ -165,9 +165,9 @@ var predefinedRoles = map[string][]rbacv1.PolicyRule{
 		},
 	},
 
-	// deployer — деплой приложений (CI/CD).
-	// Может обновлять workload-ресурсы, но не может exec или читать secrets.
-	// Подходит для: GitLab CI, GitHub Actions, ArgoCD service accounts.
+	// deployer — application deployment (CI/CD).
+	// Can update workload resources, but cannot exec or read secrets.
+	// Use case: GitLab CI, GitHub Actions, ArgoCD service accounts.
 	"deployer": {
 		{
 			APIGroups: []string{"apps"},
@@ -216,9 +216,9 @@ var predefinedRoles = map[string][]rbacv1.PolicyRule{
 		},
 	},
 
-	// debugger — глубокая отладка runtime.
-	// Может заходить в поды, смотреть логи, port-forward — без права менять что-либо.
-	// Подходит для: SRE на инциденте, временный доступ для внешнего специалиста.
+	// debugger — deep runtime debugging.
+	// Can exec into pods, view logs, port-forward — without permission to change anything.
+	// Use case: SRE during an incident, temporary access for an external specialist.
 	"debugger": {
 		{
 			APIGroups: []string{""},
@@ -262,9 +262,9 @@ var predefinedRoles = map[string][]rbacv1.PolicyRule{
 		},
 	},
 
-	// operator — управление workload-ами без доступа к секретам кластера.
-	// Может рестартовать поды, обновлять деплойменты, управлять сервисами.
-	// Подходит для: SRE, platform team, дежурные инженеры.
+	// operator — manage workloads without access to cluster secrets.
+	// Can restart pods, update deployments, manage services.
+	// Use case: SRE, platform team, on-call engineers.
 	"operator": {
 		{
 			APIGroups: []string{""},
@@ -338,10 +338,10 @@ var predefinedRoles = map[string][]rbacv1.PolicyRule{
 		},
 	},
 
-	// auditor — read-only аудит всего namespace.
-	// Видит всё включая secrets — для security audit.
-	// Рекомендуется выдавать временно через аннотацию expires-at.
-	// Подходит для: security team, compliance аудиторы, внешние проверки.
+	// auditor — read-only audit of the entire namespace.
+	// Sees everything including secrets — for security audits.
+	// Recommended to grant temporarily via an expires-at annotation.
+	// Use case: security team, compliance auditors, external reviews.
 	"auditor": {
 		{
 			APIGroups: []string{""},
@@ -386,8 +386,8 @@ var predefinedRoles = map[string][]rbacv1.PolicyRule{
 		},
 	},
 
-	// maintainer — полный доступ ко всему в namespace.
-	// Подходит для: tech leads, platform engineers, владельцы сервиса.
+	// maintainer — full access to everything in the namespace.
+	// Use case: tech leads, platform engineers, service owners.
 	"maintainer": {
 		{
 			APIGroups: []string{"*"},
@@ -396,10 +396,10 @@ var predefinedRoles = map[string][]rbacv1.PolicyRule{
 		},
 	},
 
-	// cluster-admin — полный доступ ко всему кластеру.
-	// Эквивалент встроенной роли cluster-admin в Kubernetes.
-	// ВАЖНО: всегда использовать с clusterWide: true, иначе права будут только в одном namespace.
-	// Подходит для: платформенные инженеры, emergency доступ, деплой сложных helm-чартов.
+	// cluster-admin — full access to the entire cluster.
+	// Equivalent to Kubernetes' built-in cluster-admin role.
+	// IMPORTANT: always use with clusterWide: true, otherwise access is scoped to one namespace.
+	// Use case: platform engineers, emergency access, deploying complex Helm charts.
 	"cluster-admin": {
 		{
 			APIGroups: []string{"*"},

@@ -1,6 +1,7 @@
 package v1alpha1
 
 import (
+	"strings"
 	"testing"
 
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -456,7 +457,7 @@ func TestAccessGrantValidateCreate(t *testing.T) {
 			}
 
 			if tt.wantErr && tt.errContains != "" && err != nil {
-				if !contains(err.Error(), tt.errContains) {
+				if !strings.Contains(err.Error(), tt.errContains) {
 					t.Errorf("ValidateCreate() error = %v, should contain %q", err, tt.errContains)
 				}
 			}
@@ -555,7 +556,7 @@ func TestAccessGrantValidateUpdate(t *testing.T) {
 			}
 
 			if tt.wantErr && tt.errContains != "" && err != nil {
-				if !contains(err.Error(), tt.errContains) {
+				if !strings.Contains(err.Error(), tt.errContains) {
 					t.Errorf("ValidateUpdate() error = %v, should contain %q", err, tt.errContains)
 				}
 			}
@@ -618,18 +619,4 @@ func TestValidateAllPredefinedRoles(t *testing.T) {
 			}
 		})
 	}
-}
-
-// Helper function
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(s) > len(substr) && containsSubstring(s, substr))
-}
-
-func containsSubstring(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
 }
