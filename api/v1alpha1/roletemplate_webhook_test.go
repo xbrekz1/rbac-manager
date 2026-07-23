@@ -1,6 +1,8 @@
 package v1alpha1
 
 import (
+	"context"
+	"strings"
 	"testing"
 
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -182,7 +184,7 @@ func TestRoleTemplateValidateCreate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := tt.rt.ValidateCreate()
+			_, err := (&RoleTemplateCustomValidator{}).ValidateCreate(context.Background(), tt.rt)
 
 			if tt.wantErr && err == nil {
 				t.Error("expected error but got none")
@@ -191,7 +193,7 @@ func TestRoleTemplateValidateCreate(t *testing.T) {
 				t.Errorf("unexpected error: %v", err)
 			}
 			if tt.wantErr && tt.errContains != "" && err != nil {
-				if !containsSubstring(err.Error(), tt.errContains) {
+				if !strings.Contains(err.Error(), tt.errContains) {
 					t.Errorf("error = %v, should contain %q", err, tt.errContains)
 				}
 			}
@@ -218,7 +220,7 @@ func TestRoleTemplateValidateUpdate(t *testing.T) {
 				},
 			},
 		}
-		if _, err := newRT.ValidateUpdate(old); err != nil {
+		if _, err := (&RoleTemplateCustomValidator{}).ValidateUpdate(context.Background(), old, newRT); err != nil {
 			t.Errorf("unexpected error: %v", err)
 		}
 	})
@@ -232,7 +234,7 @@ func TestRoleTemplateValidateUpdate(t *testing.T) {
 				},
 			},
 		}
-		if _, err := newRT.ValidateUpdate(old); err == nil {
+		if _, err := (&RoleTemplateCustomValidator{}).ValidateUpdate(context.Background(), old, newRT); err == nil {
 			t.Error("expected error but got none")
 		}
 	})
@@ -247,7 +249,7 @@ func TestRoleTemplateValidateDelete(t *testing.T) {
 			},
 		},
 	}
-	if _, err := rt.ValidateDelete(); err != nil {
+	if _, err := (&RoleTemplateCustomValidator{}).ValidateDelete(context.Background(), rt); err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
 }

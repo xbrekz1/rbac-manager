@@ -322,7 +322,9 @@ func (r *AccessGrantReconciler) cleanupRBAC(ctx context.Context, ag *rbacmanager
 		objs func() []client.Object
 	}
 	steps := []step{
-		{"ClusterRoleBinding", crbList, func() []client.Object { return asObjects[rbacv1.ClusterRoleBinding, *rbacv1.ClusterRoleBinding](crbList.Items) }},
+		{"ClusterRoleBinding", crbList, func() []client.Object {
+			return asObjects[rbacv1.ClusterRoleBinding, *rbacv1.ClusterRoleBinding](crbList.Items)
+		}},
 		{"ClusterRole", crList, func() []client.Object { return asObjects[rbacv1.ClusterRole, *rbacv1.ClusterRole](crList.Items) }},
 		{"RoleBinding", rbList, func() []client.Object { return asObjects[rbacv1.RoleBinding, *rbacv1.RoleBinding](rbList.Items) }},
 		{"Role", roleList, func() []client.Object { return asObjects[rbacv1.Role, *rbacv1.Role](roleList.Items) }},

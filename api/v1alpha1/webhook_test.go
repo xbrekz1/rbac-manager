@@ -1,6 +1,7 @@
 package v1alpha1
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -446,7 +447,7 @@ func TestAccessGrantValidateCreate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			warnings, err := tt.ag.ValidateCreate()
+			warnings, err := (&AccessGrantCustomValidator{}).ValidateCreate(context.Background(), tt.ag)
 
 			if tt.wantErr && err == nil {
 				t.Errorf("ValidateCreate() expected error but got none")
@@ -545,7 +546,7 @@ func TestAccessGrantValidateUpdate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := tt.newAG.ValidateUpdate(oldAG)
+			_, err := (&AccessGrantCustomValidator{}).ValidateUpdate(context.Background(), oldAG, tt.newAG)
 
 			if tt.wantErr && err == nil {
 				t.Errorf("ValidateUpdate() expected error but got none")
@@ -576,7 +577,7 @@ func TestAccessGrantValidateDelete(t *testing.T) {
 		},
 	}
 
-	warnings, err := ag.ValidateDelete()
+	warnings, err := (&AccessGrantCustomValidator{}).ValidateDelete(context.Background(), ag)
 	if err != nil {
 		t.Errorf("ValidateDelete() unexpected error: %v", err)
 	}
@@ -613,7 +614,7 @@ func TestValidateAllPredefinedRoles(t *testing.T) {
 				},
 			}
 
-			_, err := ag.ValidateCreate()
+			_, err := (&AccessGrantCustomValidator{}).ValidateCreate(context.Background(), ag)
 			if err != nil {
 				t.Errorf("ValidateCreate() for role %q failed: %v", role, err)
 			}

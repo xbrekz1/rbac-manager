@@ -1,13 +1,12 @@
 package v1alpha1
 
 import (
+	"context"
 	"fmt"
 
 	rbacv1 "k8s.io/api/rbac/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	"github.com/xbrekz1/rbac-manager/internal/roles"
@@ -24,32 +23,35 @@ var rbacResources = map[string]bool{
 
 // SetupWebhookWithManager registers the webhook for AccessGrant in the manager.
 func (r *AccessGrant) SetupWebhookWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewWebhookManagedBy(mgr).
-		For(r).
+	return ctrl.NewWebhookManagedBy(mgr, &AccessGrant{}).
+		WithValidator(&AccessGrantCustomValidator{}).
 		Complete()
 }
 
 // +kubebuilder:webhook:path=/validate-rbacmanager-io-v1alpha1-accessgrant,mutating=false,failurePolicy=fail,sideEffects=None,groups=rbacmanager.io,resources=accessgrants,verbs=create;update,versions=v1alpha1,name=vaccessgrant.kb.io,admissionReviewVersions=v1
 
-var _ webhook.Validator = &AccessGrant{}
+// AccessGrantCustomValidator validates AccessGrant resources at admission time.
+type AccessGrantCustomValidator struct{}
 
-// ValidateCreate implements webhook.Validator so a webhook will be registered for the type.
-func (r *AccessGrant) ValidateCreate() (admission.Warnings, error) {
-	accessgrantlog.Info("validate create", "name", r.Name)
+var _ admission.Validator[*AccessGrant] = &AccessGrantCustomValidator{}
 
-	return r.validateAccessGrant()
+// ValidateCreate implements admission.Validator.
+func (v *AccessGrantCustomValidator) ValidateCreate(_ context.Context, obj *AccessGrant) (admission.Warnings, error) {
+	accessgrantlog.Info("validate create", "name", obj.Name)
+
+	return obj.validateAccessGrant()
 }
 
-// ValidateUpdate implements webhook.Validator so a webhook will be registered for the type.
-func (r *AccessGrant) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
-	accessgrantlog.Info("validate update", "name", r.Name)
+// ValidateUpdate implements admission.Validator.
+func (v *AccessGrantCustomValidator) ValidateUpdate(_ context.Context, _, newObj *AccessGrant) (admission.Warnings, error) {
+	accessgrantlog.Info("validate update", "name", newObj.Name)
 
-	return r.validateAccessGrant()
+	return newObj.validateAccessGrant()
 }
 
-// ValidateDelete implements webhook.Validator so a webhook will be registered for the type.
-func (r *AccessGrant) ValidateDelete() (admission.Warnings, error) {
-	accessgrantlog.Info("validate delete", "name", r.Name)
+// ValidateDelete implements admission.Validator.
+func (v *AccessGrantCustomValidator) ValidateDelete(_ context.Context, obj *AccessGrant) (admission.Warnings, error) {
+	accessgrantlog.Info("validate delete", "name", obj.Name)
 
 	// No validation needed for delete
 	return nil, nil
