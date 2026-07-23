@@ -214,8 +214,12 @@ func (r *AccessGrantReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *AccessGrantReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	// Setup event recorder
-	r.Recorder = mgr.GetEventRecorderFor("rbac-manager")
+	// Setup event recorder.
+	// GetEventRecorderFor is deprecated in favor of GetEventRecorder, but the
+	// replacement returns the new events.EventRecorder interface (Eventf with
+	// regarding/related/action fields) which is not a drop-in replacement for
+	// the record.EventRecorder.Event calls used throughout this file.
+	r.Recorder = mgr.GetEventRecorderFor("rbac-manager") //nolint:staticcheck // SA1019: see comment above
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&rbacmanagerv1alpha1.AccessGrant{}).

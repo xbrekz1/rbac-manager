@@ -65,7 +65,7 @@ vet: ## Run go vet
 .PHONY: lint
 lint: ## Run golangci-lint
 	@echo "Running golangci-lint..."
-	@which golangci-lint > /dev/null || (echo "golangci-lint not found. Install with: go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest" && exit 1)
+	@which golangci-lint > /dev/null || (echo "golangci-lint not found. Run: make install-tools" && exit 1)
 	golangci-lint run --timeout=5m
 
 .PHONY: clean
@@ -170,15 +170,15 @@ setup-envtest: ## Setup envtest binaries
 	setup-envtest use
 
 
-GOLANGCI_LINT_VERSION  ?= v1.64.8
+GOLANGCI_LINT_VERSION  ?= v2.12.2
 CONTROLLER_GEN_VERSION ?= v0.17.3
 SETUP_ENVTEST_VERSION  ?= v0.19.3
-GINKGO_VERSION         ?= v2.19.0
+GINKGO_VERSION         ?= v2.27.4
 
 .PHONY: install-tools
 install-tools: ## Install development tools (versions pinned above)
 	@echo "Installing development tools..."
-	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
+	@go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
 	@go install sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_GEN_VERSION)
 	@go install sigs.k8s.io/controller-runtime/tools/setup-envtest@$(SETUP_ENVTEST_VERSION)
 	@go install github.com/onsi/ginkgo/v2/ginkgo@$(GINKGO_VERSION)

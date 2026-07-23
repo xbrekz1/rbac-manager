@@ -1,99 +1,95 @@
-# golangci-lint configuration for rbac-manager
+version: "2"
 run:
-  timeout: 5m
-  tests: true
   modules-download-mode: readonly
-
-linters:
-  enable:
-    - errcheck       # Check for unchecked errors
-    - gosimple       # Simplify code
-    - govet          # Vet examines Go source code
-    - ineffassign    # Detect ineffectual assignments
-    - staticcheck    # Static analysis checks
-    - unused         # Check for unused code
-    - gofmt          # Check if code is formatted
-    - goimports      # Check imports formatting
-    - misspell       # Spell checker
-    - revive         # Fast, configurable linter
-    - unconvert      # Remove unnecessary type conversions
-    - unparam        # Report unused function parameters
-    - gosec          # Security checks
-    - gocritic       # Opinionated Go linter
-    - gocyclo        # Cyclomatic complexity
-    - bodyclose      # HTTP response body close check
-    - nilerr         # Find nil error returns
-    - noctx          # Find sending http request without context
-    - thelper        # Detect test helpers without t.Helper()
-    - predeclared    # Find shadowed predeclared identifiers
-
-linters-settings:
-  errcheck:
-    check-type-assertions: true
-    check-blank: true
-    exclude-functions:
-      - (io.Closer).Close
-
-  govet:
-    enable-all: true
-    disable:
-      - shadow        # Too many false positives
-      - fieldalignment # Micro-optimization, not worth reordering CRD/API types
-
-  gocyclo:
-    min-complexity: 15
-
-  gosec:
-    excludes:
-      - G404 # Insecure random number source (use crypto/rand) - not needed for non-crypto
-
-  revive:
-    rules:
-      - name: exported
-        disabled: false
-        arguments:
-          - "checkPrivateReceivers"
-          - "sayRepetitiveInsteadOfStutters"
-
-  gocritic:
-    enabled-tags:
-      - diagnostic
-      - style
-      - performance
-    disabled-checks:
-      - unnamedResult
-      - hugeParam
-      - uncheckedInlineErr # intentional: client.IgnoreNotFound(err) pattern in cleanup loops
-
-issues:
-  exclude-rules:
-    # Exclude some linters from running on tests files
-    - path: _test\.go
-      linters:
-        - gocyclo
-        - errcheck
-        - gosec
-        - gocritic
-
-    # Exclude generated files
-    - path: zz_generated\.deepcopy\.go
-      linters:
-        - all
-
-    # Allow dot imports in Ginkgo/Gomega tests
-    - path: _test\.go
-      text: "should not use dot imports"
-      linters:
-        - revive
-
-  # Maximum issues count per one linter. Set to 0 to disable
-  max-issues-per-linter: 0
-
-  # Maximum count of issues with the same text. Set to 0 to disable
-  max-same-issues: 0
-
+  tests: true
 output:
   formats:
-    - format: line-number
-  print-issued-lines: true
-  print-linter-name: true
+    text:
+      path: stdout
+      print-linter-name: true
+      print-issued-lines: true
+      colors: false
+linters:
+  enable:
+    - bodyclose
+    - gocritic
+    - gocyclo
+    - gosec
+    - misspell
+    - nilerr
+    - noctx
+    - predeclared
+    - revive
+    - thelper
+    - unconvert
+    - unparam
+  settings:
+    errcheck:
+      check-type-assertions: true
+      check-blank: true
+      exclude-functions:
+        - (io.Closer).Close
+    gocritic:
+      disabled-checks:
+        - unnamedResult
+        - hugeParam
+        - uncheckedInlineErr
+      enabled-tags:
+        - diagnostic
+        - style
+        - performance
+    gocyclo:
+      min-complexity: 15
+    gosec:
+      excludes:
+        - G404
+    govet:
+      disable:
+        - shadow
+        - fieldalignment
+      enable-all: true
+    revive:
+      rules:
+        - name: exported
+          arguments:
+            - checkPrivateReceivers
+            - sayRepetitiveInsteadOfStutters
+          disabled: false
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - linters:
+          - errcheck
+          - gocritic
+          - gocyclo
+          - gosec
+        path: _test\.go
+      - linters:
+          - all
+        path: zz_generated\.deepcopy\.go
+      - linters:
+          - revive
+        path: _test\.go
+        text: should not use dot imports
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
