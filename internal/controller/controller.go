@@ -6,6 +6,7 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -100,20 +101,11 @@ func (r *AccessGrantReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return ctrl.Result{Requeue: true}, nil
 	}
 
-	// Update status to Pending.
-	ag.Status.Phase = rbacmanagerv1alpha1.PhasePending
-	ag.Status.Message = "Reconciling RBAC resources"
-	meta.SetStatusCondition(&ag.Status.Conditions, metav1.Condition{
-		Type:               ConditionTypeReady,
-		Status:             metav1.ConditionFalse,
-		Reason:             "Reconciling",
-		Message:            "Starting reconciliation",
-		ObservedGeneration: ag.Generation,
-	})
-	if err := r.Status().Update(ctx, ag); err != nil {
-		logger.Error(err, "Failed to update status to Pending")
-		return ctrl.Result{}, err
-	}
+	// Snapshot status before reconciling so the final write can be skipped if nothing
+	// actually changed. Status().Update() bumps resourceVersion, which re-triggers this
+	// controller's own watch on AccessGrant — writing unconditionally on every reconcile
+	// (including no-op resyncs) creates a self-sustaining reconcile loop.
+	oldStatus := ag.Status.DeepCopy()
 
 	// Perform RBAC reconciliation.
 	result, err := r.reconcileRBAC(ctx, ag)
@@ -131,8 +123,10 @@ func (r *AccessGrantReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			Message:            err.Error(),
 			ObservedGeneration: ag.Generation,
 		})
-		if statusErr := r.Status().Update(ctx, ag); statusErr != nil {
-			logger.Error(statusErr, "Failed to update status to Failed")
+		if !apiequality.Semantic.DeepEqual(oldStatus, &ag.Status) {
+			if statusErr := r.Status().Update(ctx, ag); statusErr != nil {
+				logger.Error(statusErr, "Failed to update status to Failed")
+			}
 		}
 		return ctrl.Result{RequeueAfter: 30 * time.Second}, err
 	}
@@ -187,9 +181,11 @@ func (r *AccessGrantReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		ObservedGeneration: ag.Generation,
 	})
 
-	if err := r.Status().Update(ctx, ag); err != nil {
-		logger.Error(err, "Failed to update status to Active")
-		return ctrl.Result{}, err
+	if !apiequality.Semantic.DeepEqual(oldStatus, &ag.Status) {
+		if err := r.Status().Update(ctx, ag); err != nil {
+			logger.Error(err, "Failed to update status to Active")
+			return ctrl.Result{}, err
+		}
 	}
 
 	r.Recorder.Event(ag, corev1.EventTypeNormal, ReasonReconciliationSucceeded,
